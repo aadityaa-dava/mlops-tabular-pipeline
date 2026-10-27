@@ -1,10 +1,11 @@
-"""LightGBM on the raw columns (no feature engineering yet), compared to the baseline."""
+"""LightGBM experiments: raw columns vs engineered features, scored on validation."""
+
+import argparse
 
 import lightgbm as lgb
 import pandas as pd
 
-from mlops_pipeline.baseline import build_model as build_baseline
-from mlops_pipeline.baseline import make_features
+from mlops_pipeline.features import add_features
 from mlops_pipeline.metrics import evaluate
 from mlops_pipeline.split import time_split
 
@@ -56,11 +57,14 @@ def build_lgbm() -> lgb.LGBMClassifier:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--features", choices=["raw", "batch1"], default="raw")
+    args = parser.parse_args()
+
     df = pd.read_parquet("data/processed/train_merged.parquet")
     train, val, _test = time_split(df)  # test is still untouched
-
-    base = build_baseline().fit(make_features(train), train["isFraud"])
-    base_scores = base.predict_proba(make_features(val))[:, 1]
+    if args.features == "batch1":
+        train, val = add_features(train), add_features(val)
 
     train_x, train_y = split_xy(train)
     val_x, val_y = split_xy(val)
@@ -74,25 +78,16 @@ def main() -> None:
     )
     scores = model.predict_proba(val_x)[:, 1]
 
-    print(f"best iteration: {model.best_iteration_}  (features: {train_x.shape[1]})")
-    headers = ["pr_auc", "roc_auc", "rec@1%", "prec@1%", "rec@5%", "prec@5%"]
-    print(f"{'model':10s} " + " ".join(f"{h:>8s}" for h in headers))
-    for name, s in (("baseline", base_scores), ("lightgbm", scores)):
-        r1 = evaluate(val["isFraud"], s, 0.01)
-        r5 = evaluate(val["isFraud"], s, 0.05)
-        row = [
-            r1["pr_auc"],
-            r1["roc_auc"],
-            r1["recall_at_1%"],
-            r1["precision_at_1%"],
-            r5["recall_at_5%"],
-            r5["precision_at_5%"],
-        ]
-        print(f"{name:10s} " + " ".join(f"{v:8.4f}" for v in row))
+    r1 = evaluate(val_y, scores, 0.01)
+    r5 = evaluate(val_y, scores, 0.05)
+    print(f"features={args.features} columns={train_x.shape[1]} best_iter={model.best_iteration_}")
+    print(f"pr_auc={r1['pr_auc']:.4f} roc_auc={r1['roc_auc']:.4f}")
+    print(f"recall@1%={r1['recall_at_1%']:.4f} precision@1%={r1['precision_at_1%']:.4f}")
+    print(f"recall@5%={r5['recall_at_5%']:.4f} precision@5%={r5['precision_at_5%']:.4f}")
 
     imp = pd.Series(model.booster_.feature_importance("gain"), index=train_x.columns)
-    print("\ntop 10 features by share of total gain:")
-    print((imp / imp.sum()).sort_values(ascending=False).head(10).round(3))
+    print("top 10 features by share of total gain:")
+    print((imp / imp.sum()).sort_values(ascending=False).head(10).round(3).to_string())
 
 
 if __name__ == "__main__":

@@ -33,3 +33,22 @@ Notes:
 - Open question: card1/card2/addr1 act like entity identifiers and there is no gap
   between train and validation, so scores may be inflated by shared cards. To test
   with a gap experiment.
+
+## Feature engineering batch 1: stateless row-wise features (validation window)
+Added ten columns via src/mlops_pipeline/features.py: hour, dow, log_amt, amt_frac,
+nan_D / nan_M / nan_V / nan_id (missing counts per column family), has_identity,
+email_match (three-valued). No state is learned, so the features cannot leak across
+splits (tested: transforming rows alone equals transforming them inside the full frame).
+
+| config | columns | trees | PR-AUC | ROC-AUC | recall@5% | precision@5% |
+|---|---|---|---|---|---|---|
+| LightGBM raw | 431 | 913 | 0.6280 | 0.9304 | 0.6614 | 0.4593 |
+| LightGBM + batch 1 | 441 | 1712 | 0.6347 | 0.9273 | 0.6644 | 0.4614 |
+
+Notes:
+- PR-AUC +0.0067 but ROC-AUC -0.0031, and trees nearly doubled: not a clear win.
+- None of the new columns reached the top-10 by gain. The ranking reshuffled among
+  correlated V columns (V257 now first, V258 share 9.3% -> 3.9%); gain importance is
+  unreliable across correlated features.
+- All results are a single seed (42) on a single validation window, so no noise estimate
+  yet. Next: repeat across seeds to measure noise before judging further feature batches.
