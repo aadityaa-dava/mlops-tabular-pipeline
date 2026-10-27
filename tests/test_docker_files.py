@@ -21,7 +21,8 @@ def test_serving_requirements_cover_the_runtime_dependencies():
 
 def test_serving_requirements_exclude_training_packages():
     pinned = {m.group(1).lower() for m in re.finditer(r"^([A-Za-z0-9_.-]+)==", SERVE_REQS, re.M)}
-    heavy = {requirement_name(d) for d in PYPROJECT["dependency-groups"]["train"]}
+    groups = PYPROJECT["dependency-groups"]
+    heavy = {requirement_name(d) for g in ("train", "monitor") for d in groups[g]}
     assert not heavy & pinned, f"training packages in the serving image: {heavy & pinned}"
 
 

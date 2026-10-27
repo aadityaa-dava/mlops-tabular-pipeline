@@ -32,9 +32,12 @@ dev = [
     "ruff>=0.6",
     "seaborn>=0.13.2",
 ]
+monitor = [
+    "evidently>=0.7.23",
+]
 
 [tool.uv]
-default-groups = ["dev", "train"]
+default-groups = ["dev", "train", "monitor"]
 
 [build-system]
 requires = ["hatchling"]
