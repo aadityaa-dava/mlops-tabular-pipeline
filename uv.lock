@@ -1842,6 +1842,7 @@ name = "mlops-tabular-pipeline"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "fastapi" },
     { name = "lightgbm" },
     { name = "mlflow" },
     { name = "pandas" },
@@ -1850,11 +1851,13 @@ dependencies = [
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "scikit-learn" },
+    { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "dvc" },
+    { name = "httpx" },
     { name = "ipykernel" },
     { name = "jupyterlab" },
     { name = "matplotlib" },
@@ -1867,6 +1870,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "fastapi", specifier = ">=0.162.0" },
     { name = "lightgbm", specifier = ">=4.7.0" },
     { name = "mlflow", specifier = ">=3.0" },
     { name = "pandas", specifier = ">=3.1.0" },
@@ -1875,11 +1879,13 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.14.1" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "scikit-learn", specifier = ">=1.9.1" },
+    { name = "uvicorn", specifier = ">=0.54.0" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "dvc", specifier = ">=3.67.1" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "ipykernel", specifier = ">=7.4.0" },
     { name = "jupyterlab", specifier = ">=4.6.4" },
     { name = "matplotlib", specifier = ">=3.11.2" },

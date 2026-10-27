@@ -5,6 +5,7 @@ description = "End-to-end ML pipeline with MLOps: versioned data, tracked experi
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "fastapi>=0.162.0",
     "lightgbm>=4.7.0",
     "mlflow>=3.0",
     "pandas>=3.1.0",
@@ -13,11 +14,13 @@ dependencies = [
     "pydantic>=2.14.1",
     "pyyaml>=6.0.3",
     "scikit-learn>=1.9.1",
+    "uvicorn>=0.54.0",
 ]
 
 [dependency-groups]
 dev = [
     "dvc>=3.67.1",
+    "httpx>=0.28.1",
     "ipykernel>=7.4.0",
     "jupyterlab>=4.6.4",
     "matplotlib>=3.11.2",
