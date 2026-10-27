@@ -96,3 +96,30 @@ lost, nearest training day stays adjacent to validation). Seeds 1, 2, 3.
   cadence matters (Phase 12).
 - Decision: batch 2 entity features (frequency encodings, aggregations) are skipped.
   This is a time-budget call, not a measured result. Production default: raw columns.
+
+## Promotion and final test-window score: fraud-lgbm v1
+Rule: docs/promotion_policy.md, implemented in src/mlops_pipeline/promotion.py.
+v1 vs the logistic-regression baseline on validation: PR-AUC gain +0.2449 (required
+0.0100), recall@5% above the baseline, round trip diff 0.0, so v1 was promoted and
+the registry alias `champion` points to it. The test window was scored once, after the
+decision, and the result is logged on the same MLflow run.
+
+| metric | validation | test (94,636 rows, fraud rate 0.0347) |
+|---|---|---|
+| PR-AUC | 0.6280 | 0.5490 |
+| ROC-AUC | 0.9304 | 0.9037 |
+| recall@1% | 0.2687 | 0.2587 |
+| precision@1% | 0.9332 | 0.8975 |
+| recall@5% | 0.6614 | 0.5893 |
+| precision@5% | 0.4593 | 0.4088 |
+
+Notes:
+- Headline number to quote: test PR-AUC 0.549 (random guess: 0.0347). Validation scores
+  are optimistic because early stopping used them.
+- The validation-to-test drop (-0.079) is similar in size to the 14-day-gap experiment
+  (-0.07). Consistent with a recency effect, not proof: different time periods also differ
+  in fraud mix and volume.
+- recall@1% is capped at about 0.29 on this window (946 alerts, about 3,280 frauds), so the
+  1% budget barely separates models. Degradation shows at 5%: recall 0.661 -> 0.589.
+- The test window is now spent for model selection. Retraining comparisons (Phase 12)
+  need a fresh holdout.
