@@ -12,7 +12,8 @@ drift monitoring are in progress.
 | data, EDA, validation, DVC | done |
 | baseline and LightGBM, MLflow tracking and registry | done |
 | config-driven DVC pipeline | done |
-| FastAPI serving, Docker, CI/CD, cloud deployment | not started |
+| FastAPI serving, Docker image, CI/CD to GHCR | done |
+| cloud deployment | not started |
 | drift monitoring, retraining trigger | not started |
 
 ## Results (test window, scored once)
@@ -46,6 +47,24 @@ Kaggle (the competition rules must be accepted with your own account).
 The DVC remote is currently a folder on the author's machine, so `dvc pull` only works
 there. A shared remote comes with the cloud-deployment phase. DVC checks the raw files
 against the hashes in `data/raw/*.csv.dvc`, so wrong or modified data is detected.
+
+## Serve
+
+Every push to `main` runs lint and tests, builds the image, starts it, checks its health,
+scores a request through it, and publishes it to GitHub's container registry tagged with the
+commit SHA. To run it locally:
+
+    docker run -p 8000:8000 ghcr.io/aadityaa-dava/mlops-tabular-pipeline:latest
+    curl -s localhost:8000/health
+
+The service scores transactions (it returns probabilities; choosing an alert threshold is
+left to the caller). Only `TransactionAmt` and `ProductCD` are required, other columns are
+optional and a missing value is treated as missing, as in training. Columns the model does
+not use (including `isFraud`) are rejected. There is no authentication or rate limiting yet.
+
+The model ships inside the image (`artifacts/champion/`, exported from the registry with
+`make export`), so serving needs neither MLflow nor the data. A test confirms the HTTP path
+scores 2,000 real validation rows identically to batch scoring.
 
 ## Layout
 
