@@ -5,6 +5,7 @@ description = "End-to-end ML pipeline with MLOps: versioned data, tracked experi
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "lightgbm>=4.7.0",
     "pandas>=3.1.0",
     "pandera>=0.35.0",
     "pyarrow>=26.0.0",
