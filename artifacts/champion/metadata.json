@@ -1,0 +1,10 @@
+{
+  "best_iteration": 913,
+  "data_train_identity_md5": "8487db5001c8bad139f3318d5d3db416",
+  "data_train_transaction_md5": "58b4038d8715f5e11007b826bef00ce7",
+  "git_commit": "de2a21b47849ca2c0d6d9a5626d7606c0acda907",
+  "model_version": 1,
+  "registered_model": "fraud-lgbm",
+  "run_id": "e7998f835f62425d911d50c4ecffb23b",
+  "val_pr_auc": 0.6280477582096541
+}

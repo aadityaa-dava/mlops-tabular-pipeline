@@ -42,5 +42,3 @@ models/
 /data/raw/*.csv
 /data/processed/*.parquet
 
-# Exported model folder (a build artifact; how CI gets it is a later decision)
-/artifacts/champion/
