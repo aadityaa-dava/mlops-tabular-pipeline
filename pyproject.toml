@@ -40,6 +40,7 @@ packages = ["src/mlops_pipeline"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["integration: needs the data file, mlflow.db and a registered champion"]
 
 [tool.ruff]
 line-length = 100
