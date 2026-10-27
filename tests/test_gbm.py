@@ -1,6 +1,16 @@
 import pandas as pd
 
-from mlops_pipeline.gbm import align_categoricals, split_xy
+from mlops_pipeline.config import ModelConfig
+from mlops_pipeline.gbm import align_categoricals, build_lgbm, split_xy, trim_train
+
+
+def make_model_cfg() -> ModelConfig:
+    return ModelConfig(
+        seed=42,
+        early_stopping_rounds=10,
+        min_category_count=2,
+        params={"n_estimators": 3, "num_leaves": 4, "learning_rate": 0.1},
+    )
 
 
 def test_rare_and_unseen_categories_become_nan():
@@ -21,18 +31,19 @@ def test_split_xy_drops_id_time_and_label():
     assert y.tolist() == [1]
 
 
-def test_build_lgbm_uses_the_given_seed():
-    from mlops_pipeline.gbm import build_lgbm
+def test_build_lgbm_uses_config_params_and_seed():
+    params = build_lgbm(make_model_cfg()).get_params()
+    assert params["random_state"] == 42
+    assert (params["n_estimators"], params["num_leaves"], params["learning_rate"]) == (3, 4, 0.1)
 
-    assert build_lgbm().get_params()["random_state"] == 42
-    assert build_lgbm(7).get_params()["random_state"] == 7
+
+def test_build_lgbm_seed_override():
+    assert build_lgbm(make_model_cfg(), seed=7).get_params()["random_state"] == 7
 
 
 def test_trim_train_gap_and_early_trim():
-    from mlops_pipeline.gbm import trim_train
-
     df = pd.DataFrame({"TransactionDT": [d * 86400 for d in [1, 10, 100, 110, 119]]})
-    assert len(trim_train(df)) == 5
-    assert len(trim_train(df, gap_days=10)) == 3  # keeps days < 110
-    assert len(trim_train(df, trim_early_days=10)) == 4  # keeps days >= 10
-    assert len(trim_train(df, gap_days=10, trim_early_days=10)) == 2
+    assert len(trim_train(df, 0.0, 0.0, 120.0)) == 5
+    assert len(trim_train(df, 10.0, 0.0, 120.0)) == 3  # keeps days < 110
+    assert len(trim_train(df, 0.0, 10.0, 120.0)) == 4  # keeps days >= 10
+    assert len(trim_train(df, 10.0, 10.0, 120.0)) == 2

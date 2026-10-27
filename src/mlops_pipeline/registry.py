@@ -10,19 +10,12 @@ import mlflow.lightgbm
 import pandas as pd
 from mlflow import MlflowClient
 
-from mlops_pipeline.gbm import TRAIN_END_DAY, split_xy
+from mlops_pipeline.config import load_config
+from mlops_pipeline.gbm import split_xy
 from mlops_pipeline.metrics import evaluate
 from mlops_pipeline.promotion import should_promote
 from mlops_pipeline.split import time_split
-from mlops_pipeline.tracking import (
-    EXPERIMENT,
-    MODEL_NAME,
-    TRACKING_URI,
-    VAL_END_DAY,
-    apply_categories,
-    metric_key,
-    predict_scores,
-)
+from mlops_pipeline.tracking import apply_categories, metric_key, predict_scores
 
 
 def promotion_metrics(run_metrics: dict[str, float]) -> dict[str, float]:
@@ -37,19 +30,22 @@ def promotion_metrics(run_metrics: dict[str, float]) -> dict[str, float]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--config", default="configs/config.yaml")
     parser.add_argument("--version", type=int, default=None, help="default: latest version")
     args = parser.parse_args()
+    cfg = load_config(args.config)
+    name = cfg.mlflow.registered_model
 
-    mlflow.set_tracking_uri(TRACKING_URI)
+    mlflow.set_tracking_uri(cfg.mlflow.tracking_uri)
     client = MlflowClient()
-    versions = client.search_model_versions(f"name='{MODEL_NAME}'")
+    versions = client.search_model_versions(f"name='{name}'")
     version = args.version or max(int(v.version) for v in versions)
-    mv = client.get_model_version(MODEL_NAME, str(version))
+    mv = client.get_model_version(name, str(version))
     if not mv.run_id:
         raise SystemExit(f"model version {version} has no linked run")
     run = client.get_run(mv.run_id)
 
-    exp = client.get_experiment_by_name(EXPERIMENT)
+    exp = client.get_experiment_by_name(cfg.mlflow.experiment)
     baseline_run = client.search_runs(
         [exp.experiment_id],
         filter_string="tags.mlflow.runName = 'baseline'",
@@ -61,27 +57,29 @@ def main() -> None:
         promotion_metrics(run.data.metrics),
         baseline=promotion_metrics(baseline_run.data.metrics),
     )
-    print(f"{MODEL_NAME} v{version}: promote={decision.promote} ({decision.reason})")
+    print(f"{name} v{version}: promote={decision.promote} ({decision.reason})")
     if not decision.promote:
         raise SystemExit("not promoted; test window not scored")
 
-    client.set_registered_model_alias(MODEL_NAME, "champion", str(version))
-    champion = client.get_model_version_by_alias(MODEL_NAME, "champion")
+    client.set_registered_model_alias(name, "champion", str(version))
+    champion = client.get_model_version_by_alias(name, "champion")
     print(f"alias 'champion' now points to v{champion.version}")
 
     if "test_pr_auc" in run.data.metrics:
         raise SystemExit("test window already scored for this run; refusing to score it again")
 
-    df = pd.read_parquet("data/processed/train_merged.parquet")
-    _train, _val, test = time_split(df, TRAIN_END_DAY, VAL_END_DAY)
+    df = pd.read_parquet(cfg.data.merged_path)
+    _train, _val, test = time_split(df, cfg.split.train_end_day, cfg.split.val_end_day)
     x, y = split_xy(test)
     cats_path = mlflow.artifacts.download_artifacts(
         run_id=run.info.run_id, artifact_path="categories.json"
     )
     categories = json.loads(Path(cats_path).read_text())
-    model = mlflow.lightgbm.load_model(f"models:/{MODEL_NAME}/{version}")
+    model = mlflow.lightgbm.load_model(f"models:/{name}/{version}")
     scores = predict_scores(model, apply_categories(x, categories))
-    test_metrics = {**evaluate(y, scores, 0.01), **evaluate(y, scores, 0.05)}
+    test_metrics: dict[str, float] = {}
+    for budget in cfg.evaluation.budgets:
+        test_metrics.update(evaluate(y, scores, budget))
 
     with mlflow.start_run(run_id=run.info.run_id):
         mlflow.log_metrics({f"test_{metric_key(k)}": v for k, v in test_metrics.items()})

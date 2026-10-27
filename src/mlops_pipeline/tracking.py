@@ -1,4 +1,4 @@
-"""Train the raw-feature LightGBM and log it to MLflow: params, metrics, data version, model."""
+"""Train the raw-feature LightGBM from the config and log it to MLflow."""
 
 import argparse
 import json
@@ -6,21 +6,17 @@ import re
 import subprocess
 from pathlib import Path
 
-import lightgbm as lgb
 import mlflow
 import mlflow.artifacts
 import mlflow.lightgbm
 import numpy as np
 import pandas as pd
 
-from mlops_pipeline.gbm import TRAIN_END_DAY, align_categoricals, build_lgbm, split_xy
+from mlops_pipeline.config import load_config
+from mlops_pipeline.gbm import align_categoricals, build_lgbm, fit_lgbm, split_xy
 from mlops_pipeline.metrics import evaluate
 from mlops_pipeline.split import time_split
 
-TRACKING_URI = "sqlite:///mlflow.db"
-EXPERIMENT = "fraud-ieee-cis"
-MODEL_NAME = "fraud-lgbm"
-VAL_END_DAY = 150.0
 DVC_POINTERS = {
     "data_train_transaction_md5": "data/raw/train_transaction.csv.dvc",
     "data_train_identity_md5": "data/raw/train_identity.csv.dvc",
@@ -76,50 +72,61 @@ def predict_scores(model, x: pd.DataFrame) -> np.ndarray:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--config", default="configs/config.yaml")
+    parser.add_argument("--seed", type=int, default=None, help="default: the config's seed")
+    parser.add_argument(
+        "--no-register", action="store_true", help="log the run but do not register the model"
+    )
     args = parser.parse_args()
+    cfg = load_config(args.config)
+    seed = cfg.model.seed if args.seed is None else args.seed
 
-    df = pd.read_parquet("data/processed/train_merged.parquet")
-    train, val, _test = time_split(df, TRAIN_END_DAY, VAL_END_DAY)  # test stays untouched
+    df = pd.read_parquet(cfg.data.merged_path)
+    # the test window stays untouched
+    train, val, _test = time_split(df, cfg.split.train_end_day, cfg.split.val_end_day)
     train_x, train_y = split_xy(train)
     val_x_raw, val_y = split_xy(val)
-    train_x, val_x = align_categoricals(train_x, val_x_raw)
+    train_x, val_x = align_categoricals(train_x, val_x_raw, min_count=cfg.model.min_category_count)
     categories = fit_categories(train_x)
 
-    mlflow.set_tracking_uri(TRACKING_URI)
-    mlflow.set_experiment(EXPERIMENT)
+    mlflow.set_tracking_uri(cfg.mlflow.tracking_uri)
+    mlflow.set_experiment(cfg.mlflow.experiment)
     sha, dirty = git_state()
-    model = build_lgbm(args.seed)
+    model = build_lgbm(cfg.model, seed)
+    register_as = None if args.no_register else cfg.mlflow.registered_model
 
-    with mlflow.start_run(run_name=f"lgbm-raw-seed{args.seed}") as run:
-        mlflow.set_tags({"git_commit": sha, "git_dirty": str(dirty), "scored_on": "validation"})
+    with mlflow.start_run(run_name=f"lgbm-raw-seed{seed}") as run:
+        mlflow.set_tags(
+            {
+                "git_commit": sha,
+                "git_dirty": str(dirty),
+                "scored_on": "validation",
+                "registered": "no" if args.no_register else "yes",
+            }
+        )
         mlflow.log_params(model.get_params())
         mlflow.log_params(
             {
-                "seed": args.seed,
+                "seed": seed,
                 "features": "raw",
-                "train_end_day": TRAIN_END_DAY,
-                "val_end_day": VAL_END_DAY,
+                "train_end_day": cfg.split.train_end_day,
+                "val_end_day": cfg.split.val_end_day,
                 "train_rows": len(train),
                 "val_rows": len(val),
                 **{k: dvc_md5(p) for k, p in DVC_POINTERS.items()},
             }
         )
 
-        model.fit(
-            train_x,
-            train_y,
-            eval_X=val_x,
-            eval_y=val_y,
-            callbacks=[lgb.early_stopping(100, verbose=False)],
-        )
+        fit_lgbm(model, train_x, train_y, val_x, val_y, cfg.model.early_stopping_rounds)
         scores = predict_scores(model, val_x)
-        metrics = {**evaluate(val_y, scores, 0.01), **evaluate(val_y, scores, 0.05)}
+        metrics: dict[str, float] = {}
+        for budget in cfg.evaluation.budgets:
+            metrics.update(evaluate(val_y, scores, budget))
         mlflow.log_metrics({f"val_{metric_key(k)}": v for k, v in metrics.items()})
         mlflow.log_metric("best_iteration", model.best_iteration_)
         mlflow.log_dict(categories, "categories.json")
 
-        info = mlflow.lightgbm.log_model(model, name="model", registered_model_name=MODEL_NAME)
+        info = mlflow.lightgbm.log_model(model, name="model", registered_model_name=register_as)
 
         # Round trip: reload the logged model and rebuild features from the saved categories
         loaded = mlflow.lightgbm.load_model(info.model_uri)
@@ -135,8 +142,9 @@ def main() -> None:
     for key, value in metrics.items():
         print(f"{key:>16s}: {value:.4f}")
     print(f"roundtrip_max_abs_diff: {max_diff:.2e}")
-    versions = mlflow.MlflowClient().search_model_versions(f"name='{MODEL_NAME}'")
-    print(f"registered {MODEL_NAME} versions: {sorted(int(v.version) for v in versions)}")
+    name = cfg.mlflow.registered_model
+    versions = mlflow.MlflowClient().search_model_versions(f"name='{name}'")
+    print(f"registered {name} versions: {sorted(int(v.version) for v in versions)}")
     if max_diff > 1e-6:
         raise SystemExit("reloaded model does not reproduce the original scores")
 

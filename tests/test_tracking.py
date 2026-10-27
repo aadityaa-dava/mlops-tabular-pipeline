@@ -30,7 +30,7 @@ def make_frames() -> tuple[pd.DataFrame, pd.DataFrame]:
 
 def test_saved_categories_reproduce_training_alignment():
     train, val = make_frames()
-    aligned_train, aligned_val = align_categoricals(train, val)
+    aligned_train, aligned_val = align_categoricals(train, val, min_count=100)
     cats = fit_categories(aligned_train)
     assert cats == {"c": ["a", "b"]}  # numeric column ignored, rare category dropped
     pd.testing.assert_frame_equal(apply_categories(val, cats), aligned_val)
