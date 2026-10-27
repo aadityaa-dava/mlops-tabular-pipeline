@@ -40,3 +40,9 @@ models/
 
 # Docker
 *.tar
+
+# DVC pointer files and their ignore lists must be tracked by git
+!/data/raw/*.dvc
+!/data/raw/.gitignore
+!/data/processed/*.dvc
+!/data/processed/.gitignore
