@@ -1,0 +1,45 @@
+"""Promotion rule: should a candidate model replace the current champion?
+
+Pure functions only, so the rule is easy to test and the retraining job can run the
+same code. Metric keys are the MLflow names without the "val_" prefix.
+"""
+
+from dataclasses import dataclass
+
+PR_AUC_MARGIN = 0.01  # a bit above the 0.0076 seed-to-seed range measured on validation
+RECALL_TOLERANCE = 0.01
+ROUNDTRIP_TOLERANCE = 1e-6
+_EPS = 1e-9  # absorbs floating point error at the boundaries
+
+
+@dataclass(frozen=True)
+class Decision:
+    promote: bool
+    reason: str
+
+
+def should_promote(
+    candidate: dict[str, float],
+    champion: dict[str, float] | None = None,
+    baseline: dict[str, float] | None = None,
+    margin: float = PR_AUC_MARGIN,
+    recall_tolerance: float = RECALL_TOLERANCE,
+) -> Decision:
+    """Compare the candidate with the champion, or with the baseline if none exists yet."""
+    reference, label = (champion, "champion") if champion is not None else (baseline, "baseline")
+    if reference is None:
+        raise ValueError("need a champion or a baseline to compare against")
+    if candidate["roundtrip_max_abs_diff"] > ROUNDTRIP_TOLERANCE:
+        return Decision(False, "reloaded model does not reproduce its own scores")
+    gain = candidate["pr_auc"] - reference["pr_auc"]
+    if gain < margin - _EPS:
+        return Decision(
+            False, f"PR-AUC gain {gain:+.4f} is below the required {margin:.4f} over the {label}"
+        )
+    recall_drop = reference["recall_at_5pct"] - candidate["recall_at_5pct"]
+    if recall_drop > recall_tolerance + _EPS:
+        return Decision(
+            False,
+            f"recall@5% drops {recall_drop:.4f}, more than the allowed {recall_tolerance:.4f}",
+        )
+    return Decision(True, f"PR-AUC gain {gain:+.4f} over the {label} meets the {margin:.4f} margin")
