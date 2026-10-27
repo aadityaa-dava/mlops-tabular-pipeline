@@ -14,6 +14,7 @@ import pandas as pd
 
 from mlops_pipeline.config import load_config
 from mlops_pipeline.gbm import align_categoricals, build_lgbm, fit_lgbm, split_xy
+from mlops_pipeline.inference import apply_categories, predict_scores
 from mlops_pipeline.metrics import evaluate
 from mlops_pipeline.split import time_split
 
@@ -57,20 +58,6 @@ def fit_categories(x: pd.DataFrame) -> dict[str, list[str]]:
         for c in x.columns
         if isinstance(x[c].dtype, pd.CategoricalDtype)
     }
-
-
-def apply_categories(x: pd.DataFrame, categories: dict[str, list[str]]) -> pd.DataFrame:
-    """Cast text columns to the training categories; unseen or rare values become NaN."""
-    out = x.copy()
-    for col, cats in categories.items():
-        out[col] = out[col].where(out[col].isin(cats)).astype(pd.CategoricalDtype(cats))
-    return out
-
-
-def predict_scores(model, x: pd.DataFrame) -> np.ndarray:
-    if hasattr(model, "predict_proba"):
-        return model.predict_proba(x)[:, 1]
-    return model.predict(x)
 
 
 def main() -> None:

@@ -1,31 +1,15 @@
-"""FastAPI service: loads the champion model once at startup and scores transactions."""
+"""FastAPI service: loads an exported model folder once at startup and scores transactions."""
 
-import json
+import os
 from collections.abc import Callable
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
 
-import mlflow
-import mlflow.artifacts
-import mlflow.lightgbm
 from fastapi import FastAPI, HTTPException, Request
-from mlflow import MlflowClient
 from pydantic import BaseModel
 
-from mlops_pipeline.config import Config, load_config
-from mlops_pipeline.registry import CHAMPION_ALIAS
+from mlops_pipeline.inference import predict_scores
+from mlops_pipeline.model_store import DEFAULT_MODEL_DIR, LoadedModel, load_exported
 from mlops_pipeline.serving import PredictRequest, build_frame, records_from_request
-from mlops_pipeline.tracking import predict_scores
-
-
-@dataclass(frozen=True)
-class LoadedModel:
-    model: Any
-    feature_names: list[str]
-    categories: dict[str, list[str]]
-    version: str
 
 
 class HealthResponse(BaseModel):
@@ -39,25 +23,9 @@ class PredictResponse(BaseModel):
     scores: list[float]
 
 
-def load_champion(cfg: Config) -> LoadedModel:
-    """Load the model holding the champion alias, plus its saved category lists."""
-    name = cfg.mlflow.registered_model
-    mlflow.set_tracking_uri(cfg.mlflow.tracking_uri)
-    mv = MlflowClient().get_model_version_by_alias(name, CHAMPION_ALIAS)
-    model = mlflow.lightgbm.load_model(f"models:/{name}/{mv.version}")
-    cats_path = mlflow.artifacts.download_artifacts(
-        run_id=mv.run_id, artifact_path="categories.json"
-    )
-    return LoadedModel(
-        model=model,
-        feature_names=list(model.feature_name_),
-        categories=json.loads(Path(cats_path).read_text()),
-        version=str(mv.version),
-    )
-
-
 def create_app(loader: Callable[[], LoadedModel] | None = None) -> FastAPI:
-    load = loader or (lambda: load_champion(load_config()))
+    """Build the app; by default it loads the folder named by MODEL_DIR."""
+    load = loader or (lambda: load_exported(os.environ.get("MODEL_DIR", DEFAULT_MODEL_DIR)))
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):

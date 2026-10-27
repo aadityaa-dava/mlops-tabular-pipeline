@@ -41,3 +41,6 @@ models/
 # directory: DVC does not discover .dvc files under a directory wildcard.
 /data/raw/*.csv
 /data/processed/*.parquet
+
+# Exported model folder (a build artifact; how CI gets it is a later decision)
+/artifacts/champion/

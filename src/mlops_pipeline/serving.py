@@ -6,7 +6,7 @@ from typing import Any, Literal
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
-from mlops_pipeline.tracking import apply_categories
+from mlops_pipeline.inference import apply_categories
 
 MAX_BATCH = 1000
 
