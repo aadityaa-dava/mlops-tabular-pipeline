@@ -13,7 +13,7 @@ drift monitoring are in progress.
 | baseline and LightGBM, MLflow tracking and registry | done |
 | config-driven DVC pipeline | done |
 | FastAPI serving, Docker image, CI/CD to GHCR | done |
-| cloud deployment | not started |
+| cloud deployment (Render free tier) | done |
 | drift monitoring, retraining trigger | not started |
 
 ## Results (test window, scored once)
@@ -65,6 +65,22 @@ not use (including `isFraud`) are rejected. There is no authentication or rate l
 The model ships inside the image (`artifacts/champion/`, exported from the registry with
 `make export`), so serving needs neither MLflow nor the data. A test confirms the HTTP path
 scores 2,000 real validation rows identically to batch scoring.
+
+## Live demo
+
+The service is deployed on Render's free tier from the image CI publishes:
+
+    https://fraud-api-bvtt.onrender.com/health
+
+Things to know before calling it:
+
+- A free instance spins down after 15 minutes without traffic, so the first request after
+  a quiet spell can take about a minute.
+- It has no authentication or rate limiting: anyone with the URL can call it. It scores
+  transactions and returns probabilities; no data is stored.
+- The disk is ephemeral, so nothing written by the service survives a restart.
+- Redeploys are manual: the service pins one image tag (a commit SHA), and Render does not
+  redeploy prebuilt images automatically. See `docs/deployment.md`.
 
 ## Layout
 
