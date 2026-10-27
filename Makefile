@@ -1,4 +1,4 @@
-.PHONY: help setup test lint format repro mlflow-ui
+.PHONY: help setup test lint format repro mlflow-ui serve
 
 help:
 	@echo "make setup      install dependencies and the pinned Python (uv sync)"
@@ -25,3 +25,6 @@ repro:
 
 mlflow-ui:
 	uv run mlflow server --backend-store-uri sqlite:///mlflow.db --port 5050
+
+serve:
+	uv run uvicorn mlops_pipeline.api:create_app --factory --port 8000
