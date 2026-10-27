@@ -1,0 +1,10 @@
+{
+  "val_pr_auc": 0.628048,
+  "val_roc_auc": 0.93039,
+  "val_recall_at_1pct": 0.268737,
+  "val_precision_at_1pct": 0.933177,
+  "val_recall_at_5pct": 0.661377,
+  "val_precision_at_5pct": 0.45932,
+  "best_iteration": 913,
+  "roundtrip_max_abs_diff": 0.0
+}

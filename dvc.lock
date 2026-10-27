@@ -51,3 +51,54 @@ stages:
       hash: md5
       md5: 6b40ed5fdac2786258c719282159a0ce
       size: 82
+  train:
+    cmd: python -m mlops_pipeline.tracking --no-register
+    deps:
+    - path: data/processed/train_merged.parquet
+      hash: md5
+      md5: 4be27a7dac849661dbe13b6959ee4e0b
+      size: 83413152
+    - path: src/mlops_pipeline/config.py
+      hash: md5
+      md5: 46a55eaa541b8f6f0209bccbe85a54a9
+      size: 1603
+    - path: src/mlops_pipeline/gbm.py
+      hash: md5
+      md5: d6122db658d0babc7efc11d006b08e8b
+      size: 4852
+    - path: src/mlops_pipeline/metrics.py
+      hash: md5
+      md5: 6f75c813affb8e6c02b8fc97ee94a5bf
+      size: 881
+    - path: src/mlops_pipeline/split.py
+      hash: md5
+      md5: dfec7e146b1b122724312984e5a08545
+      size: 1571
+    - path: src/mlops_pipeline/tracking.py
+      hash: md5
+      md5: 2e2aab71d85cd5a03101e589d29c4f46
+      size: 6258
+    params:
+      configs/config.yaml:
+        evaluation.budgets:
+        - 0.01
+        - 0.05
+        model.early_stopping_rounds: 100
+        model.min_category_count: 100
+        model.params.colsample_bytree: 0.5
+        model.params.learning_rate: 0.05
+        model.params.metric: average_precision
+        model.params.min_child_samples: 100
+        model.params.n_estimators: 2000
+        model.params.num_leaves: 64
+        model.params.reg_lambda: 1.0
+        model.params.subsample: 0.8
+        model.params.subsample_freq: 1
+        model.seed: 42
+        split.train_end_day: 120.0
+        split.val_end_day: 150.0
+    outs:
+    - path: reports/train_metrics.json
+      hash: md5
+      md5: 7be517ab48a28eca2455f8ef20410217
+      size: 253
