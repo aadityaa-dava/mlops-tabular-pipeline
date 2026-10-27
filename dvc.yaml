@@ -1,0 +1,26 @@
+stages:
+  merge:
+    cmd: python -m mlops_pipeline.data
+    deps:
+      - data/raw/train_transaction.csv
+      - data/raw/train_identity.csv
+      - src/mlops_pipeline/data.py
+      - src/mlops_pipeline/config.py
+    params:
+      - configs/config.yaml:
+          - data.raw_dir
+          - data.merged_path
+    outs:
+      - data/processed/train_merged.parquet
+  validate:
+    cmd: python -m mlops_pipeline.schema
+    deps:
+      - data/processed/train_merged.parquet
+      - src/mlops_pipeline/schema.py
+      - src/mlops_pipeline/config.py
+    params:
+      - configs/config.yaml:
+          - data.merged_path
+    metrics:
+      - reports/data_validation.json:
+          cache: false

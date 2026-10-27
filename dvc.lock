@@ -1,0 +1,53 @@
+schema: '2.0'
+stages:
+  merge:
+    cmd: python -m mlops_pipeline.data
+    deps:
+    - path: data/raw/train_identity.csv
+      hash: md5
+      md5: 8487db5001c8bad139f3318d5d3db416
+      size: 26529680
+    - path: data/raw/train_transaction.csv
+      hash: md5
+      md5: 58b4038d8715f5e11007b826bef00ce7
+      size: 683351067
+    - path: src/mlops_pipeline/config.py
+      hash: md5
+      md5: 46a55eaa541b8f6f0209bccbe85a54a9
+      size: 1603
+    - path: src/mlops_pipeline/data.py
+      hash: md5
+      md5: b69cd1b2c72ca8d2113b37669621bd64
+      size: 1177
+    params:
+      configs/config.yaml:
+        data.merged_path: data/processed/train_merged.parquet
+        data.raw_dir: data/raw
+    outs:
+    - path: data/processed/train_merged.parquet
+      hash: md5
+      md5: 4be27a7dac849661dbe13b6959ee4e0b
+      size: 83413152
+  validate:
+    cmd: python -m mlops_pipeline.schema
+    deps:
+    - path: data/processed/train_merged.parquet
+      hash: md5
+      md5: 4be27a7dac849661dbe13b6959ee4e0b
+      size: 83413152
+    - path: src/mlops_pipeline/config.py
+      hash: md5
+      md5: 46a55eaa541b8f6f0209bccbe85a54a9
+      size: 1603
+    - path: src/mlops_pipeline/schema.py
+      hash: md5
+      md5: a932e06d4fda569c020e144c6390ba58
+      size: 1859
+    params:
+      configs/config.yaml:
+        data.merged_path: data/processed/train_merged.parquet
+    outs:
+    - path: reports/data_validation.json
+      hash: md5
+      md5: 6b40ed5fdac2786258c719282159a0ce
+      size: 82
