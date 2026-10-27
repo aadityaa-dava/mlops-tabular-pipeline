@@ -1844,13 +1844,8 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "lightgbm" },
-    { name = "mlflow" },
     { name = "pandas" },
-    { name = "pandera" },
-    { name = "pyarrow" },
     { name = "pydantic" },
-    { name = "pyyaml" },
-    { name = "scikit-learn" },
     { name = "uvicorn" },
 ]
 
@@ -1867,18 +1862,20 @@ dev = [
     { name = "ruff" },
     { name = "seaborn" },
 ]
+train = [
+    { name = "mlflow" },
+    { name = "pandera" },
+    { name = "pyarrow" },
+    { name = "pyyaml" },
+    { name = "scikit-learn" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.162.0" },
     { name = "lightgbm", specifier = ">=4.7.0" },
-    { name = "mlflow", specifier = ">=3.0" },
     { name = "pandas", specifier = ">=3.1.0" },
-    { name = "pandera", specifier = ">=0.35.0" },
-    { name = "pyarrow", specifier = "<26" },
     { name = "pydantic", specifier = ">=2.14.1" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "scikit-learn", specifier = ">=1.9.1" },
     { name = "uvicorn", specifier = ">=0.54.0" },
 ]
 
@@ -1894,6 +1891,13 @@ dev = [
     { name = "pytest-cov", specifier = ">=5.0" },
     { name = "ruff", specifier = ">=0.6" },
     { name = "seaborn", specifier = ">=0.13.2" },
+]
+train = [
+    { name = "mlflow", specifier = ">=3.0" },
+    { name = "pandera", specifier = ">=0.35.0" },
+    { name = "pyarrow", specifier = "<26" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "scikit-learn", specifier = ">=1.9.1" },
 ]
 
 [[package]]
