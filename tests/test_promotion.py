@@ -1,6 +1,6 @@
 import pytest
 
-from mlops_pipeline.promotion import should_promote
+from mlops_pipeline.promotion import should_promote, window_mismatch
 
 
 def metrics(pr_auc: float, recall: float, diff: float = 0.0) -> dict[str, float]:
@@ -55,3 +55,19 @@ def test_first_model_is_compared_with_the_baseline():
 def test_needs_something_to_compare_against():
     with pytest.raises(ValueError):
         should_promote(metrics(0.6, 0.6))
+
+
+WINDOW = {"train_end_day": "120.0", "val_end_day": "150.0", "val_rows": "85303"}
+
+
+def test_same_window_is_comparable():
+    assert window_mismatch(WINDOW, dict(WINDOW)) is None
+
+
+def test_different_window_is_refused():
+    other = {**WINDOW, "val_rows": "90000"}
+    assert "val_rows" in window_mismatch(WINDOW, other)
+
+
+def test_missing_window_info_is_refused():
+    assert window_mismatch(WINDOW, {"train_end_day": "120.0"}) is not None

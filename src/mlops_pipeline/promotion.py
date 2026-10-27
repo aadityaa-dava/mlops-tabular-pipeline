@@ -43,3 +43,17 @@ def should_promote(
             f"recall@5% drops {recall_drop:.4f}, more than the allowed {recall_tolerance:.4f}",
         )
     return Decision(True, f"PR-AUC gain {gain:+.4f} over the {label} meets the {margin:.4f} margin")
+
+
+WINDOW_PARAMS = ("train_end_day", "val_end_day", "val_rows")
+
+
+def window_mismatch(
+    candidate_params: dict[str, str], reference_params: dict[str, str]
+) -> str | None:
+    """Describe the first difference in the evaluation window, or None if they match."""
+    for key in WINDOW_PARAMS:
+        a, b = candidate_params.get(key), reference_params.get(key)
+        if a is None or b is None or a != b:
+            return f"{key} differs or is missing (candidate {a}, reference {b})"
+    return None

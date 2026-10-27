@@ -29,3 +29,17 @@ Candidate and reference must be scored on the same fixed window.
   window (docs/results.md), so absolute numbers overstate production performance.
 - Open question for Phase 12: which window does the retraining job use to compare a new
   candidate with the champion? Not decided yet.
+
+## Amendment (Step 46)
+- A candidate is compared with the current champion (alias `champion`). The baseline is
+  the reference only while no champion exists. A candidate that already is the champion
+  is a no-op.
+- Candidate and reference runs must share the evaluation window (train_end_day,
+  val_end_day, val_rows); otherwise the comparison is refused.
+- The test window is scored at most once per project, for the first champion. Once any
+  run in the experiment carries the tag test_scored=yes, later candidates are decided on
+  validation only and the test window is not touched. The guard is registry-wide, not
+  per run: looking at a second candidate's test score would turn the test window into a
+  selection set.
+- A rejected candidate is a normal outcome (exit code 0, reason printed), not an error.
+- Still open (Phase 12): a fresh holdout for comparing retrained models.

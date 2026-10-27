@@ -1,4 +1,4 @@
-"""Apply the promotion policy to a registered model version and score the test window once."""
+"""Apply the promotion policy to a registered model version; score the test window once ever."""
 
 import argparse
 import json
@@ -13,9 +13,11 @@ from mlflow import MlflowClient
 from mlops_pipeline.config import load_config
 from mlops_pipeline.gbm import split_xy
 from mlops_pipeline.metrics import evaluate
-from mlops_pipeline.promotion import should_promote
+from mlops_pipeline.promotion import should_promote, window_mismatch
 from mlops_pipeline.split import time_split
 from mlops_pipeline.tracking import apply_categories, metric_key, predict_scores
+
+CHAMPION_ALIAS = "champion"
 
 
 def promotion_metrics(run_metrics: dict[str, float]) -> dict[str, float]:
@@ -26,6 +28,26 @@ def promotion_metrics(run_metrics: dict[str, float]) -> dict[str, float]:
     out = {k.removeprefix("val_"): v for k, v in run_metrics.items() if k.startswith("val_")}
     out["roundtrip_max_abs_diff"] = run_metrics.get("roundtrip_max_abs_diff", float("inf"))
     return out
+
+
+def get_champion(client: MlflowClient, name: str):
+    """The model version holding the champion alias, or None if there is none yet."""
+    models = client.search_registered_models(filter_string=f"name='{name}'")
+    if not models:
+        return None
+    version = models[0].aliases.get(CHAMPION_ALIAS)
+    return client.get_model_version(name, str(version)) if version is not None else None
+
+
+def find_test_scoring_run(client: MlflowClient, experiment_id: str) -> str | None:
+    """Run id of a run that already scored the test window, or None.
+
+    After one run has scored it, the window is spent for model selection.
+    """
+    runs = client.search_runs(
+        [experiment_id], filter_string="tags.test_scored = 'yes'", max_results=1
+    )
+    return runs[0].info.run_id if runs else None
 
 
 def main() -> None:
@@ -45,28 +67,45 @@ def main() -> None:
         raise SystemExit(f"model version {version} has no linked run")
     run = client.get_run(mv.run_id)
 
+    champion = get_champion(client, name)
+    if champion is not None and int(champion.version) == version:
+        print(f"{name} v{version} is already the champion; nothing to do")
+        return
+
     exp = client.get_experiment_by_name(cfg.mlflow.experiment)
-    baseline_run = client.search_runs(
-        [exp.experiment_id],
-        filter_string="tags.mlflow.runName = 'baseline'",
-        order_by=["attributes.start_time DESC"],
-        max_results=1,
-    )[0]
+    if champion is not None:
+        reference_run = client.get_run(champion.run_id)
+        label = f"champion v{champion.version}"
+    else:
+        reference_run = client.search_runs(
+            [exp.experiment_id],
+            filter_string="tags.mlflow.runName = 'baseline'",
+            order_by=["attributes.start_time DESC"],
+            max_results=1,
+        )[0]
+        label = "baseline"
+    mismatch = window_mismatch(run.data.params, reference_run.data.params)
+    if mismatch:
+        raise SystemExit(f"not comparable with the {label}: {mismatch}")
 
-    decision = should_promote(
-        promotion_metrics(run.data.metrics),
-        baseline=promotion_metrics(baseline_run.data.metrics),
-    )
-    print(f"{name} v{version}: promote={decision.promote} ({decision.reason})")
+    candidate = promotion_metrics(run.data.metrics)
+    reference = promotion_metrics(reference_run.data.metrics)
+    if champion is not None:
+        decision = should_promote(candidate, champion=reference)
+    else:
+        decision = should_promote(candidate, baseline=reference)
+    print(f"{name} v{version} vs {label}: promote={decision.promote} ({decision.reason})")
     if not decision.promote:
-        raise SystemExit("not promoted; test window not scored")
+        print("not promoted: the champion is unchanged and the test window is untouched")
+        return
 
-    client.set_registered_model_alias(name, "champion", str(version))
-    champion = client.get_model_version_by_alias(name, "champion")
-    print(f"alias 'champion' now points to v{champion.version}")
+    client.set_registered_model_alias(name, CHAMPION_ALIAS, str(version))
+    print(f"alias '{CHAMPION_ALIAS}' now points to v{version}")
 
-    if "test_pr_auc" in run.data.metrics:
-        raise SystemExit("test window already scored for this run; refusing to score it again")
+    spent_by = find_test_scoring_run(client, exp.experiment_id)
+    if spent_by is not None:
+        print(f"test window already used by run {spent_by}; not scoring it again")
+        return
 
     df = pd.read_parquet(cfg.data.merged_path)
     _train, _val, test = time_split(df, cfg.split.train_end_day, cfg.split.val_end_day)
