@@ -40,6 +40,20 @@ def align_categoricals(train_x: pd.DataFrame, *others: pd.DataFrame, min_count: 
     return (train_x, *others)
 
 
+TRAIN_END_DAY = 120.0
+
+
+def trim_train(
+    train: pd.DataFrame,
+    gap_days: float = 0.0,
+    trim_early_days: float = 0.0,
+    train_end_day: float = TRAIN_END_DAY,
+) -> pd.DataFrame:
+    """Drop the last gap_days (a gap before validation) and/or the first trim_early_days."""
+    day = train["TransactionDT"] / 86_400
+    return train[(day < train_end_day - gap_days) & (day >= trim_early_days)]
+
+
 def build_lgbm(seed: int = 42) -> lgb.LGBMClassifier:
     return lgb.LGBMClassifier(
         n_estimators=2000,
@@ -60,10 +74,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--features", choices=["raw", "batch1"], default="raw")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--gap-days", type=float, default=0.0)
+    parser.add_argument("--trim-early-days", type=float, default=0.0)
     args = parser.parse_args()
 
     df = pd.read_parquet("data/processed/train_merged.parquet")
-    train, val, _test = time_split(df)  # test is still untouched
+    train, val, _test = time_split(df, train_end_day=TRAIN_END_DAY)  # test untouched
+    train = trim_train(train, args.gap_days, args.trim_early_days)
     if args.features == "batch1":
         train, val = add_features(train), add_features(val)
 
@@ -82,6 +99,7 @@ def main() -> None:
     r1 = evaluate(val_y, scores, 0.01)
     r5 = evaluate(val_y, scores, 0.05)
     print(f"seed={args.seed} features={args.features} iters={model.best_iteration_}")
+    print(f"gap_days={args.gap_days} trim_early_days={args.trim_early_days} rows={len(train)}")
     print(f"pr_auc={r1['pr_auc']:.4f} roc_auc={r1['roc_auc']:.4f}")
     print(f"recall@1%={r1['recall_at_1%']:.4f} precision@1%={r1['precision_at_1%']:.4f}")
     print(f"recall@5%={r5['recall_at_5%']:.4f} precision@5%={r5['precision_at_5%']:.4f}")

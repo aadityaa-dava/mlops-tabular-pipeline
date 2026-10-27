@@ -26,3 +26,13 @@ def test_build_lgbm_uses_the_given_seed():
 
     assert build_lgbm().get_params()["random_state"] == 42
     assert build_lgbm(7).get_params()["random_state"] == 7
+
+
+def test_trim_train_gap_and_early_trim():
+    from mlops_pipeline.gbm import trim_train
+
+    df = pd.DataFrame({"TransactionDT": [d * 86400 for d in [1, 10, 100, 110, 119]]})
+    assert len(trim_train(df)) == 5
+    assert len(trim_train(df, gap_days=10)) == 3  # keeps days < 110
+    assert len(trim_train(df, trim_early_days=10)) == 4  # keeps days >= 10
+    assert len(trim_train(df, gap_days=10, trim_early_days=10)) == 2

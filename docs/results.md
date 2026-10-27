@@ -71,3 +71,28 @@ Notes:
 - Decision: production default stays on raw columns. features.py is kept as tested
   experiment code. Seeds only measure model randomness; they do not measure sensitivity
   to the choice of validation window.
+
+## Recency experiment: gap before validation (raw features, validation PR-AUC)
+Question: do shared cards / recent data inflate validation scores? Run with
+`--gap-days 14` (drop the last 14 training days, so a 14-day gap precedes validation) and
+a control `--trim-early-days 14` (drop the first 14 training days: same amount of data
+lost, nearest training day stays adjacent to validation). Seeds 1, 2, 3.
+
+| seed | no gap | control | gap-14 |
+|---|---|---|---|
+| 1 | 0.6322 | 0.6263 | 0.5558 |
+| 2 | 0.6356 | 0.6300 | 0.5589 |
+| 3 | 0.6298 | 0.6352 | 0.5615 |
+| mean | 0.6325 | 0.6305 | 0.5587 |
+| rows | 410,601 | 358,988 | 368,632 |
+| recall@5% (mean) | 0.6659 | 0.6621 | 0.6080 |
+
+- The control stays within seed noise of no-gap, so lost data volume does not explain
+  the drop. Gap-14 loses about 0.07 PR-AUC with more rows than the control.
+- The mechanism is not identified. Shared cards across the cutoff and fast-changing
+  fraud patterns would both produce this result.
+- Implication: validation scores assume training data right up to the cutoff. With
+  delayed labels in production, expect something closer to the gap-14 number. Retraining
+  cadence matters (Phase 12).
+- Decision: batch 2 entity features (frequency encodings, aggregations) are skipped.
+  This is a time-budget call, not a measured result. Production default: raw columns.
