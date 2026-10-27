@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --frozen
+      - name: Lint
+        run: make lint
+      - name: Test
+        run: make test
+
+  build-image:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image (no push)
+        run: docker build -t fraud-api:ci .
+      - name: Start the container and check health
+        run: |
+          docker run -d --name fraud-api -p 8000:8000 fraud-api:ci
+          for i in $(seq 1 12); do
+            sleep 5
+            status=$(docker inspect --format '{{.State.Health.Status}}' fraud-api)
+            echo "health: $status"
+            [ "$status" = "healthy" ] && exit 0
+          done
+          docker logs fraud-api
+          exit 1
+      - name: Score a request through the container
+        run: |
+          curl -sf -X POST localhost:8000/predict \
+            -H "Content-Type: application/json" \
+            -d '{"transactions":[{"TransactionAmt":59.0,"ProductCD":"W"}]}'
