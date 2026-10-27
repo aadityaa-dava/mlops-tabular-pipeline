@@ -22,11 +22,6 @@ htmlcov/
 .idea/
 .vscode/
 
-# Data (tracked by DVC, never by git)
-/data/raw/*
-/data/processed/*
-!/data/raw/.gitkeep
-!/data/processed/.gitkeep
 
 # MLflow local artifacts
 mlruns/
@@ -41,8 +36,8 @@ models/
 # Docker
 *.tar
 
-# DVC pointer files and their ignore lists must be tracked by git
-!/data/raw/*.dvc
-!/data/raw/.gitignore
-!/data/processed/*.dvc
-!/data/processed/.gitignore
+
+# Data files (versioned by DVC, never by git). Ignore by file type, not by
+# directory: DVC does not discover .dvc files under a directory wildcard.
+/data/raw/*.csv
+/data/processed/*.parquet
