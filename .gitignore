@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+.coverage
+htmlcov/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# macOS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Data (tracked by DVC, never by git)
+/data/raw/*
+/data/processed/*
+!/data/raw/.gitkeep
+!/data/processed/.gitkeep
+
+# MLflow local artifacts
+mlruns/
+mlartifacts/
+mlflow.db
+
+# Models and outputs
+models/
+*.pkl
+*.joblib
+
+# Docker
+*.tar
