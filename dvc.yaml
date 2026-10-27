@@ -24,3 +24,32 @@ stages:
     metrics:
       - reports/data_validation.json:
           cache: false
+  train:
+    cmd: python -m mlops_pipeline.tracking --no-register
+    deps:
+      - data/processed/train_merged.parquet
+      - src/mlops_pipeline/tracking.py
+      - src/mlops_pipeline/gbm.py
+      - src/mlops_pipeline/split.py
+      - src/mlops_pipeline/metrics.py
+      - src/mlops_pipeline/config.py
+    params:
+      - configs/config.yaml:
+          - split.train_end_day
+          - split.val_end_day
+          - model.seed
+          - model.early_stopping_rounds
+          - model.min_category_count
+          - model.params.n_estimators
+          - model.params.learning_rate
+          - model.params.num_leaves
+          - model.params.min_child_samples
+          - model.params.subsample
+          - model.params.subsample_freq
+          - model.params.colsample_bytree
+          - model.params.reg_lambda
+          - model.params.metric
+          - evaluation.budgets
+    metrics:
+      - reports/train_metrics.json:
+          cache: false

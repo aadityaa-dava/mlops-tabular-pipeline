@@ -23,6 +23,9 @@ DVC_POINTERS = {
 }
 
 
+TRAIN_METRICS_PATH = Path("reports/train_metrics.json")
+
+
 def metric_key(name: str) -> str:
     """MLflow metric names cannot contain '%'."""
     return name.replace("%", "pct")
@@ -147,6 +150,13 @@ def main() -> None:
     print(f"registered {name} versions: {sorted(int(v.version) for v in versions)}")
     if max_diff > 1e-6:
         raise SystemExit("reloaded model does not reproduce the original scores")
+
+    train_metrics = {f"val_{metric_key(k)}": round(v, 6) for k, v in metrics.items()}
+    train_metrics["best_iteration"] = int(model.best_iteration_)
+    train_metrics["roundtrip_max_abs_diff"] = max_diff
+    TRAIN_METRICS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with TRAIN_METRICS_PATH.open("w") as f:
+        json.dump(train_metrics, f, indent=2)
 
 
 if __name__ == "__main__":

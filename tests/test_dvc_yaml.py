@@ -40,3 +40,19 @@ def test_tracked_params_exist_in_the_config():
                     for part in key.split("."):
                         assert part in node, f"{stage_name}: {key} not in config"
                         node = node[part]
+
+
+def test_train_stage_never_registers_a_model():
+    from mlops_pipeline.tracking import TRAIN_METRICS_PATH
+
+    train = STAGES["train"]
+    assert "--no-register" in train["cmd"]  # promotion is a decision, not a pipeline output
+    assert [entry_path(m) for m in train["metrics"]] == [str(TRAIN_METRICS_PATH)]
+    assert str(CFG.data.merged_path) in train["deps"]
+
+
+def test_train_stage_tracks_every_hyperparameter():
+    entries = STAGES["train"]["params"]
+    tracked = {key for entry in entries for keys in entry.values() for key in keys}
+    expected = {f"model.params.{k}" for k in RAW_CONFIG["model"]["params"]}
+    assert expected <= tracked, f"untracked hyperparameters: {expected - tracked}"
