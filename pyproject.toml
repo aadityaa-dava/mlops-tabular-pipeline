@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "End-to-end ML pipeline with MLOps: versioned data, tracked experiments, CI/CD, deployment, drift monitoring."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
-dependencies = []
+dependencies = [
+    "pandas>=3.1.0",
+    "pandera>=0.35.0",
+    "pyarrow>=26.0.0",
+]
 
 [dependency-groups]
 dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.6"]
