@@ -12,12 +12,15 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
         with:
           enable-cache: true
       - name: Install dependencies
@@ -27,13 +30,21 @@ jobs:
       - name: Test
         run: make test
 
-  build-image:
+  build-and-publish:
     needs: lint-and-test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - uses: actions/checkout@v4
-      - name: Build the image (no push)
-        run: docker build -t fraud-api:ci .
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build the image and load it locally
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: fraud-api:ci
       - name: Start the container and check health
         run: |
           docker run -d --name fraud-api -p 8000:8000 fraud-api:ci
@@ -50,3 +61,17 @@ jobs:
           curl -sf -X POST localhost:8000/predict \
             -H "Content-Type: application/json" \
             -d '{"transactions":[{"TransactionAmt":59.0,"ProductCD":"W"}]}'
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish the tested image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker tag fraud-api:ci "$IMAGE:${GITHUB_SHA}"
+          docker tag fraud-api:ci "$IMAGE:latest"
+          docker push "$IMAGE:${GITHUB_SHA}"
+          docker push "$IMAGE:latest"
