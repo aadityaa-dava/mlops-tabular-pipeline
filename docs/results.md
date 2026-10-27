@@ -52,3 +52,22 @@ Notes:
   unreliable across correlated features.
 - All results are a single seed (42) on a single validation window, so no noise estimate
   yet. Next: repeat across seeds to measure noise before judging further feature batches.
+
+## Seed noise: raw vs batch 1 (validation PR-AUC, same single validation window)
+
+| seed | raw | + batch 1 | difference | recall@5% raw | recall@5% batch 1 |
+|---|---|---|---|---|---|
+| 42 | 0.6280 | 0.6347 | +0.0067 | 0.6614 | 0.6644 |
+| 1 | 0.6322 | 0.6304 | -0.0018 | 0.6648 | 0.6577 |
+| 2 | 0.6356 | 0.6312 | -0.0044 | 0.6759 | 0.6607 |
+| 3 | 0.6298 | 0.6321 | +0.0023 | 0.6570 | 0.6583 |
+| mean | 0.6314 | 0.6321 | +0.0007 | 0.6648 | 0.6603 |
+
+- Raw PR-AUC varies 0.6280-0.6356 across seeds (sd about 0.003). Differences below about
+  0.008 are not distinguishable from seed noise on this window.
+- Batch 1 shows no reliable gain: the sign flips across seeds, and recall@5% is slightly
+  lower on average. The seed-42 gain of +0.0067 reported earlier was the most favourable
+  of four pairings.
+- Decision: production default stays on raw columns. features.py is kept as tested
+  experiment code. Seeds only measure model randomness; they do not measure sensitivity
+  to the choice of validation window.

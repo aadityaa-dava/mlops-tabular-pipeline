@@ -40,7 +40,7 @@ def align_categoricals(train_x: pd.DataFrame, *others: pd.DataFrame, min_count: 
     return (train_x, *others)
 
 
-def build_lgbm() -> lgb.LGBMClassifier:
+def build_lgbm(seed: int = 42) -> lgb.LGBMClassifier:
     return lgb.LGBMClassifier(
         n_estimators=2000,
         learning_rate=0.05,
@@ -51,7 +51,7 @@ def build_lgbm() -> lgb.LGBMClassifier:
         colsample_bytree=0.5,
         reg_lambda=1.0,
         metric="average_precision",
-        random_state=42,
+        random_state=seed,
         verbose=-1,
     )
 
@@ -59,6 +59,7 @@ def build_lgbm() -> lgb.LGBMClassifier:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--features", choices=["raw", "batch1"], default="raw")
+    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
     df = pd.read_parquet("data/processed/train_merged.parquet")
@@ -69,7 +70,7 @@ def main() -> None:
     train_x, train_y = split_xy(train)
     val_x, val_y = split_xy(val)
     train_x, val_x = align_categoricals(train_x, val_x)
-    model = build_lgbm().fit(
+    model = build_lgbm(args.seed).fit(
         train_x,
         train_y,
         eval_X=val_x,
@@ -80,7 +81,7 @@ def main() -> None:
 
     r1 = evaluate(val_y, scores, 0.01)
     r5 = evaluate(val_y, scores, 0.05)
-    print(f"features={args.features} columns={train_x.shape[1]} best_iter={model.best_iteration_}")
+    print(f"seed={args.seed} features={args.features} iters={model.best_iteration_}")
     print(f"pr_auc={r1['pr_auc']:.4f} roc_auc={r1['roc_auc']:.4f}")
     print(f"recall@1%={r1['recall_at_1%']:.4f} precision@1%={r1['precision_at_1%']:.4f}")
     print(f"recall@5%={r5['recall_at_5%']:.4f} precision@5%={r5['precision_at_5%']:.4f}")

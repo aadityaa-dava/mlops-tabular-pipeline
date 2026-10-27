@@ -19,3 +19,10 @@ def test_split_xy_drops_id_time_and_label():
     x, y = split_xy(df)
     assert list(x.columns) == ["TransactionAmt"]
     assert y.tolist() == [1]
+
+
+def test_build_lgbm_uses_the_given_seed():
+    from mlops_pipeline.gbm import build_lgbm
+
+    assert build_lgbm().get_params()["random_state"] == 42
+    assert build_lgbm(7).get_params()["random_state"] == 7
