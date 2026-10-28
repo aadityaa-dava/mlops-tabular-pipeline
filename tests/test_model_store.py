@@ -1,3 +1,4 @@
+import json
 import subprocess
 import sys
 
@@ -7,7 +8,12 @@ import pandas as pd
 import pytest
 
 from mlops_pipeline.inference import apply_categories, predict_scores
-from mlops_pipeline.model_store import REQUIRED_FILES, load_exported, write_export
+from mlops_pipeline.model_store import (
+    IMPORTANCE_FILE,
+    REQUIRED_FILES,
+    load_exported,
+    write_export,
+)
 
 CATEGORIES = {"c": ["a", "b"]}
 
@@ -56,3 +62,19 @@ def test_serving_modules_do_not_import_mlflow():
     code = "import sys, mlops_pipeline.api; print('mlflow' in sys.modules)"
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
     assert out.stdout.strip() == "False"
+
+
+def test_export_writes_gain_shares_summing_to_one(tmp_path):
+    model, _ = fit_tiny_model()
+    write_export(tmp_path, model.booster_, CATEGORIES, {"model_version": 1})
+    shares = json.loads((tmp_path / IMPORTANCE_FILE).read_text())
+    assert set(shares) == {"num", "c"}
+    assert sum(shares.values()) == pytest.approx(1.0)
+    assert list(shares.values()) == sorted(shares.values(), reverse=True)
+
+
+def test_importance_file_is_optional_for_serving(tmp_path):
+    model, _ = fit_tiny_model()
+    write_export(tmp_path, model.booster_, CATEGORIES, {"model_version": 1})
+    (tmp_path / IMPORTANCE_FILE).unlink()
+    assert load_exported(tmp_path).version == "1"
