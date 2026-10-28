@@ -14,7 +14,8 @@ drift monitoring are in progress.
 | config-driven DVC pipeline | done |
 | FastAPI serving, Docker image, CI/CD to GHCR | done |
 | cloud deployment (Render free tier) | done |
-| drift monitoring, retraining trigger | not started |
+| drift monitoring (own environment, per-column limits, sensitivity simulation) | done |
+| retraining trigger | not started |
 
 ## Results (test window, scored once)
 
@@ -81,6 +82,36 @@ Things to know before calling it:
 - The disk is ephemeral, so nothing written by the service survives a restart.
 - Redeploys are manual: the service pins one image tag (a commit SHA), and Render does not
   redeploy prebuilt images automatically. See `docs/deployment.md`.
+
+## Monitoring
+
+Drift checks run in `monitoring/`, a separate environment with pandas 2, because Evidently
+0.7 does not import under pandas 3 (the main pipeline stays on pandas 3). The two sides share
+files, not code: the model export folder lists which features matter
+(`feature_importance.json`) and which are categorical (`categories.json`).
+
+    make monitor     compare time windows with a training-period reference
+    make simulate    inject controlled shifts and see where the rules start to fire
+
+- It watches the model's 10 highest-gain features. A window alerts when a column's Evidently
+  drift score, or the change in its share of missing values, reaches that column's own limit.
+  Limits are 1.25x the largest value seen in four training blocks, with floors.
+- In the simulation the per-column limits caught a 10% inflation of transaction amounts, a
+  shift of 0.1 standard deviations in `C13`, and 5% of rows carrying an unseen email domain.
+  A single global threshold needed roughly 50%, 0.25 and 10% for the same three. They missed
+  a 5% inflation of amounts.
+- Known gaps: a sparse column that stops arriving (`V258`, present in about a quarter of rows)
+  is not detected at all; the limits were calibrated on windows inside the reference sample,
+  so they are optimistic; and the per-column rule already fires on the validation window
+  (`D2`), which may be real drift or a limit that is too tight.
+- Feature drift did not predict the performance drop: nothing alerted under the global rule
+  when test PR-AUC fell by 0.08. Detecting decay needs labels, which arrive late in
+  production.
+- The deployed service is not wired to the monitor. Newer images log one JSON line per
+  `/predict` call to stdout (aggregates only, no field values), but the live Render service
+  runs an older image and its disk is ephemeral.
+
+Details and numbers: `docs/monitoring.md`.
 
 ## Layout
 
