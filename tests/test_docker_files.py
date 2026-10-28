@@ -41,3 +41,15 @@ def test_dockerignore_keeps_data_and_secrets_out_but_not_the_model():
     for entry in ("data", ".git", "mlflow.db", ".env"):
         assert entry in DOCKERIGNORE, entry
     assert "artifacts" not in DOCKERIGNORE
+
+
+def test_ci_runs_the_monitoring_tests_in_their_own_environment():
+    import yaml
+
+    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text())
+    job = workflow["jobs"]["monitoring-tests"]
+    steps = [step for step in job["steps"] if "run" in step]
+    commands = {step["run"]: step.get("working-directory") for step in steps}
+    assert any("uv sync --frozen" in c and wd == "monitoring" for c, wd in commands.items())
+    assert any("pytest" in c and wd == "monitoring" for c, wd in commands.items())
+    assert (ROOT / "monitoring" / "uv.lock").exists()  # --frozen needs the committed lock
