@@ -42,3 +42,6 @@ models/
 /data/raw/*.csv
 /data/processed/*.parquet
 
+
+/artifacts/candidate/
+/artifacts/candidate_check/

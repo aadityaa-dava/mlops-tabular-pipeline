@@ -1,0 +1,28 @@
+{
+  "promote": true,
+  "reason": "gain +0.0878 meets the margin and its interval excludes zero",
+  "margin": 0.02,
+  "pr_auc_diff": 0.08782933562983586,
+  "interval": [
+    0.07763652384975332,
+    0.09808905232307209
+  ],
+  "recall_at_5pct_drop": -0.08314087759815247,
+  "roundtrip_max_abs_diff": 0.0,
+  "candidate_train_days": [
+    0,
+    135.0
+  ],
+  "compare_days": [
+    135.0,
+    150.0
+  ],
+  "compare_rows": 39533,
+  "compare_frauds": 1299,
+  "candidate_train_rows": 456371,
+  "candidate_trees": 1214,
+  "champion_version": "1",
+  "champion_pr_auc": 0.5257032113923872,
+  "candidate_pr_auc": 0.613532547022223,
+  "caveat": "early stopping used the comparison window, so the candidate is optimistic"
+}

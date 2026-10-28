@@ -55,3 +55,21 @@ lower, and a passing reload round trip. The 0.02 was set after seeing these numb
 cannot validate it. The B result is largely the recency effect (its training data ends the
 day before the comparison window), so it shows what retraining on fresh data buys, not a
 better model in a deeper sense. Early stopping used the comparison window for both models.
+
+## Retraining run (Step 81): candidate trained on days 0-135
+`make retrain` trains a candidate on days 0-135 and compares it with the champion on days
+135-150 (39,533 rows, 1,299 frauds), same rows for both, using the paired rule above.
+Result: champion PR-AUC 0.5257, candidate 0.6135, paired difference +0.0878 (interval +0.0776
+to +0.0981), recall@5% 8.3 points higher, round trip exact. The rule accepts the candidate,
+which was written to artifacts/candidate/ (git-ignored staging folder). The champion, the
+registry and the deployed image were not touched.
+
+Limits that stay attached to this result:
+- One comparison window. Days 120-135 were in the candidate's training data, so there is no
+  held-out evidence for them, and the test window (150-183) has not been used.
+- The candidate's training data ends the day before the comparison window starts, the champion's
+  ended 15 days earlier. Earlier experiments showed this recency alone moves PR-AUC by about
+  0.07, so most of the gain is probably the recency effect.
+- Early stopping used the comparison window for both models.
+- Promotion is deliberately not automatic: replacing the champion needs a person to look at
+  reports/retrain_report.json first. No promote command exists yet.
