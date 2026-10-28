@@ -1,0 +1,29 @@
+export_dir: artifacts/champion
+data_path: data/processed/train_merged.parquet
+report_path: reports/drift_report.json
+top_n_features: 10
+reference:
+  start_day: 0
+  end_day: 120
+  sample_rows: 100000
+  seed: 0
+current:
+  sample_rows: 50000
+  seed: 3
+null_check:
+  sample_rows: 50000
+  seeds: [1, 2]
+windows:
+  - {name: "train days 0-30 (in reference)", start_day: 0, end_day: 30}
+  - {name: "train days 30-60 (in reference)", start_day: 30, end_day: 60}
+  - {name: "train days 60-90 (in reference)", start_day: 60, end_day: 90}
+  - {name: "train days 90-120 (in reference)", start_day: 90, end_day: 120}
+  - {name: "validation days 120-150", start_day: 120, end_day: 150}
+  - {name: "test days 150-183 (features only)", start_day: 150, end_day: 184}
+# Both were set after looking at the first run on this data, so a quiet result on these
+# windows is by construction, not evidence. column_score: above every score seen (max 0.111).
+# missing_rate_shift: the first guess (0.15) fired on days 0-30, inside the reference
+# (V258: 0.161), so it was raised to 0.2.
+thresholds:
+  column_score: 0.2
+  missing_rate_shift: 0.2

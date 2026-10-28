@@ -1,0 +1,240 @@
+{
+  "watched_columns": [
+    "V258",
+    "C1",
+    "C13",
+    "card1",
+    "card2",
+    "TransactionAmt",
+    "addr1",
+    "C14",
+    "P_emaildomain",
+    "D2"
+  ],
+  "categorical_columns": [
+    "P_emaildomain"
+  ],
+  "thresholds": {
+    "column_score": 0.2,
+    "missing_rate_shift": 0.2
+  },
+  "reference": {
+    "start_day": 0,
+    "end_day": 120,
+    "sample_rows": 100000,
+    "seed": 0,
+    "rows": 100000
+  },
+  "windows": {
+    "null: two random halves of train": {
+      "rows": 50000,
+      "scores": {
+        "V258": 0.016337,
+        "C1": 0.005749,
+        "C13": 0.006604,
+        "card1": 0.009282,
+        "card2": 0.003838,
+        "TransactionAmt": 0.008163,
+        "addr1": 0.005276,
+        "C14": 0.005989,
+        "D2": 0.004282,
+        "P_emaildomain": 0.017028
+      },
+      "missing_shifts": {
+        "V258": 0.00034,
+        "C1": 0.0,
+        "C13": 0.0,
+        "card1": 0.0,
+        "card2": 0.00088,
+        "TransactionAmt": 0.0,
+        "addr1": 0.00034,
+        "C14": 0.0,
+        "P_emaildomain": 0.00392,
+        "D2": 0.00074
+      },
+      "drifted_columns": [],
+      "missing_shift_columns": [],
+      "alert": false
+    },
+    "train days 0-30 (in reference)": {
+      "rows": 50000,
+      "scores": {
+        "V258": 0.060112,
+        "C1": 0.110657,
+        "C13": 0.06882,
+        "card1": 0.011731,
+        "card2": 0.050564,
+        "TransactionAmt": 0.039394,
+        "addr1": 0.012289,
+        "C14": 0.101103,
+        "D2": 0.048194,
+        "P_emaildomain": 0.04105
+      },
+      "missing_shifts": {
+        "V258": 0.16103,
+        "C1": 0.0,
+        "C13": 0.0,
+        "card1": 0.0,
+        "card2": 0.00297,
+        "TransactionAmt": 0.0,
+        "addr1": 0.01206,
+        "C14": 0.0,
+        "P_emaildomain": 0.00804,
+        "D2": 0.08811
+      },
+      "drifted_columns": [],
+      "missing_shift_columns": [],
+      "alert": false
+    },
+    "train days 30-60 (in reference)": {
+      "rows": 50000,
+      "scores": {
+        "V258": 0.070225,
+        "C1": 0.048061,
+        "C13": 0.030863,
+        "card1": 0.008297,
+        "card2": 0.009675,
+        "TransactionAmt": 0.012278,
+        "addr1": 0.005068,
+        "C14": 0.043034,
+        "D2": 0.020416,
+        "P_emaildomain": 0.025313
+      },
+      "missing_shifts": {
+        "V258": 0.07489,
+        "C1": 0.0,
+        "C13": 0.0,
+        "card1": 0.0,
+        "card2": 0.00357,
+        "TransactionAmt": 0.0,
+        "addr1": 0.00192,
+        "C14": 0.0,
+        "P_emaildomain": 0.0299,
+        "D2": 0.04899
+      },
+      "drifted_columns": [],
+      "missing_shift_columns": [],
+      "alert": false
+    },
+    "train days 60-90 (in reference)": {
+      "rows": 50000,
+      "scores": {
+        "V258": 0.053989,
+        "C1": 0.053082,
+        "C13": 0.035846,
+        "card1": 0.006764,
+        "card2": 0.020273,
+        "TransactionAmt": 0.022499,
+        "addr1": 0.009182,
+        "C14": 0.051086,
+        "D2": 0.022955,
+        "P_emaildomain": 0.025626
+      },
+      "missing_shifts": {
+        "V258": 0.07501,
+        "C1": 0.0,
+        "C13": 0.0,
+        "card1": 0.0,
+        "card2": 0.00145,
+        "TransactionAmt": 0.0,
+        "addr1": 0.00542,
+        "C14": 0.0,
+        "P_emaildomain": 0.00582,
+        "D2": 0.04573
+      },
+      "drifted_columns": [],
+      "missing_shift_columns": [],
+      "alert": false
+    },
+    "train days 90-120 (in reference)": {
+      "rows": 50000,
+      "scores": {
+        "V258": 0.051343,
+        "C1": 0.048524,
+        "C13": 0.027997,
+        "card1": 0.012134,
+        "card2": 0.043196,
+        "TransactionAmt": 0.020003,
+        "addr1": 0.019985,
+        "C14": 0.04378,
+        "D2": 0.043825,
+        "P_emaildomain": 0.029547
+      },
+      "missing_shifts": {
+        "V258": 0.07893,
+        "C1": 0.0,
+        "C13": 0.0,
+        "card1": 0.0,
+        "card2": 0.00099,
+        "TransactionAmt": 0.0,
+        "addr1": 0.0096,
+        "C14": 0.0,
+        "P_emaildomain": 0.01,
+        "D2": 0.02923
+      },
+      "drifted_columns": [],
+      "missing_shift_columns": [],
+      "alert": false
+    },
+    "validation days 120-150": {
+      "rows": 50000,
+      "scores": {
+        "V258": 0.072353,
+        "C1": 0.044916,
+        "C13": 0.045496,
+        "card1": 0.011119,
+        "card2": 0.028439,
+        "TransactionAmt": 0.014823,
+        "addr1": 0.005437,
+        "C14": 0.042025,
+        "D2": 0.079758,
+        "P_emaildomain": 0.034569
+      },
+      "missing_shifts": {
+        "V258": 0.09239,
+        "C1": 0.0,
+        "C13": 0.0,
+        "card1": 0.0,
+        "card2": 0.00751,
+        "TransactionAmt": 0.0,
+        "addr1": 0.01558,
+        "C14": 0.0,
+        "P_emaildomain": 0.00498,
+        "D2": 0.07931
+      },
+      "drifted_columns": [],
+      "missing_shift_columns": [],
+      "alert": false
+    },
+    "test days 150-183 (features only)": {
+      "rows": 50000,
+      "scores": {
+        "V258": 0.067381,
+        "C1": 0.040161,
+        "C13": 0.043468,
+        "card1": 0.036674,
+        "card2": 0.01652,
+        "TransactionAmt": 0.019144,
+        "addr1": 0.015033,
+        "C14": 0.032859,
+        "D2": 0.079292,
+        "P_emaildomain": 0.028485
+      },
+      "missing_shifts": {
+        "V258": 0.06583,
+        "C1": 0.0,
+        "C13": 0.0,
+        "card1": 0.0,
+        "card2": 0.00113,
+        "TransactionAmt": 0.0,
+        "addr1": 0.01108,
+        "C14": 0.0,
+        "P_emaildomain": 0.0249,
+        "D2": 0.08453
+      },
+      "drifted_columns": [],
+      "missing_shift_columns": [],
+      "alert": false
+    }
+  }
+}

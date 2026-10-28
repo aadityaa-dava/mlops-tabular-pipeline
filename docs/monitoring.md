@@ -29,3 +29,29 @@ distance (categorical), drift threshold 0.1 per column.
   performance drop (consistent with, not proof of, entity or recency effects). Detecting
   decay needs labels, which arrive late in production.
 - Only 10 columns were checked, with the default threshold and one sampling seed.
+
+## Monitoring code (monitoring/): first run
+Watchlist: the 10 features with the largest gain share (artifacts/champion/feature_importance.json).
+Reference: 100,000 random rows from days 0-120. A current window alerts when any watched
+column has an Evidently drift score of at least 0.2, or when its share of missing values
+moves by at least 0.2 (absolute) from the reference.
+
+First run, same windows as the probe: the drift scores reproduce the probe. The null row
+differs slightly on V258 (0.016 vs 0.020), probably because reference and current are swapped
+for that row (not checked). Normal change in missing share is up to about 0.09 per column,
+except V258 on days 0-30 (0.161).
+
+Threshold history:
+- missing_rate_shift started at 0.15, a guess made before seeing numbers. It fired on days
+  0-30, which are inside the reference (V258: 0.161), so it was raised to 0.2.
+- Both thresholds are tuned on the data they are judged on. With them nothing alerts on the
+  training blocks, validation or test. That shows the rules are not trigger-happy on this
+  data, not that they would catch real production drift.
+
+Open observations:
+- card1 on test scores 0.037 against at most 0.012 in the training blocks, and D2 on
+  validation and test scores about 0.08 against at most 0.048. These are 3x and 1.7x the
+  largest in-reference scores but far below the global 0.2, so they do not alert. Per-column
+  thresholds would flag them. Whether that is signal or noise is untested.
+- Next: inject controlled shifts into a window to measure how small a shift the 0.2 rule
+  detects.
