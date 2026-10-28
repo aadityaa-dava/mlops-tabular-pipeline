@@ -95,3 +95,44 @@ For the V258 rows the missing-share shift was 0.100 / 0.108 / 0.123 / 0.138 / 0.
   judging data.
 - Replace the absolute missingness rule with one that scales with how often the column is
   present, then re-run this simulation.
+
+## Per-column calibration (monitoring/run_monitor.py)
+A single global threshold cannot separate a 20% amount inflation (score 0.116) from normal
+variation in C1 (0.111 on days 0-30, inside the reference), so each watched column gets its
+own limits: max(floor, 1.25 x the largest value seen in the four training blocks), with floors
+of 0.05 (drift score) and 0.02 (change in missing share). The factor and the floors are
+judgment calls. The four blocks lie inside the reference sample, so the limits are somewhat
+optimistic, and a quiet result on those blocks is by construction.
+
+Share of rows where each column is present (measured):
+V258 0.245 in the reference, 0.167-0.406 across the four blocks, 0.153 on validation, 0.180
+on test. D2 0.500 in the reference, 0.412-0.549 across the blocks, 0.580 and 0.585 later.
+Earlier notes inferred V258 was present in about 15% of rows; the measurement says 24.5% in
+the reference, and 15-18% in the later windows.
+
+On validation and test the per-column rule fires on D2 only (0.080 and 0.079 against a limit
+of 0.060). The global rule fires on nothing. Whether the D2 alert is real drift or a limit
+that is too tight for a column that varies is not settled by this data: D2's own presence also
+moved (0.58 vs 0.41-0.55 in the blocks). The model scored well on validation, so the alert
+did not predict a problem there. Not tuned away.
+
+## Sensitivity under per-column limits (monitoring/simulate.py)
+Smallest alteration where the altered column itself trips a limit, global rule vs per-column:
+
+| family (column) | global | per-column |
+|---|---|---|
+| scale (TransactionAmt) | x1.5 | x1.1 (x1.05 missed: 0.031 vs limit 0.050) |
+| mean shift (C13) | 0.25 std | 0.1 std |
+| unseen value in rows (P_emaildomain) | 10% | 5% |
+| values go missing (V258) | not detected | not detected up to 50% |
+
+Caveats: the base window is validation, where D2 already fires, so the unaltered window is
+not clean under the per-column rule. Limits were calibrated inside the reference sample.
+One sampling seed.
+
+## Known gap
+A sparse column that stops arriving is invisible to both rules. V258 loses half of its present
+values and its missing-share shift reaches only 0.169 (normal difference 0.092, limit 0.201),
+while its drift score does not rise at all. The earlier unit test for this rule used a column
+that is 40% missing, which was far easier than the real data. A rule on the number of present
+values per window, calibrated per column, is the likely fix. Not built.

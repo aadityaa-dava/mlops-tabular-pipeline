@@ -14,19 +14,24 @@ null_check:
   sample_rows: 50000
   seeds: [1, 2]
 windows:
-  - {name: "train days 0-30 (in reference)", start_day: 0, end_day: 30}
-  - {name: "train days 30-60 (in reference)", start_day: 30, end_day: 60}
-  - {name: "train days 60-90 (in reference)", start_day: 60, end_day: 90}
-  - {name: "train days 90-120 (in reference)", start_day: 90, end_day: 120}
+  - {name: "train days 0-30 (in reference)", start_day: 0, end_day: 30, calibrate: true}
+  - {name: "train days 30-60 (in reference)", start_day: 30, end_day: 60, calibrate: true}
+  - {name: "train days 60-90 (in reference)", start_day: 60, end_day: 90, calibrate: true}
+  - {name: "train days 90-120 (in reference)", start_day: 90, end_day: 120, calibrate: true}
   - {name: "validation days 120-150", start_day: 120, end_day: 150}
   - {name: "test days 150-183 (features only)", start_day: 150, end_day: 184}
-# Both were set after looking at the first run on this data, so a quiet result on these
-# windows is by construction, not evidence. column_score: above every score seen (max 0.111).
-# missing_rate_shift: the first guess (0.15) fired on days 0-30, inside the reference
-# (V258: 0.161), so it was raised to 0.2.
+# Global rule, kept for comparison. Both were set after looking at the first run on this
+# data, so a quiet result on these windows is by construction, not evidence.
 thresholds:
   column_score: 0.2
   missing_rate_shift: 0.2
+# Per-column rule: limit = max(floor, safety_factor * largest value the column showed in the
+# windows marked calibrate). The factor and the floors are judgment calls. The calibration
+# windows lie inside the reference sample, so the limits are somewhat optimistic.
+calibration:
+  safety_factor: 1.25
+  score_floor: 0.05
+  missing_shift_floor: 0.02
 simulation:
   report_path: reports/drift_sensitivity.json
   seed: 7

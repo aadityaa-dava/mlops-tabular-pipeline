@@ -1,7 +1,14 @@
 import numpy as np
 import pandas as pd
 
-from simulate import blank_fraction, first_detected, replace_fraction, scale_column, shift_mean
+from simulate import (
+    blank_fraction,
+    first_detected,
+    replace_fraction,
+    scale_column,
+    shift_mean,
+    target_tripped,
+)
 
 
 def frame() -> pd.DataFrame:
@@ -56,3 +63,18 @@ def test_first_detected_returns_the_smallest_detected_magnitude():
 
 def test_first_detected_is_none_when_nothing_trips():
     assert first_detected([{"magnitude": 1.1, "target_detected": False}]) is None
+
+
+def test_first_detected_can_use_another_key():
+    rows = [
+        {"magnitude": 1.1, "target_detected": True, "target_detected_global": False},
+        {"magnitude": 1.5, "target_detected": True, "target_detected_global": True},
+    ]
+    assert first_detected(rows, "target_detected_global") == 1.5
+    assert first_detected(rows) == 1.1
+
+
+def test_target_tripped_checks_both_rules():
+    assert target_tripped({"drifted_columns": ["a"], "missing_shift_columns": []}, "a")
+    assert target_tripped({"drifted_columns": [], "missing_shift_columns": ["a"]}, "a")
+    assert not target_tripped({"drifted_columns": ["b"], "missing_shift_columns": []}, "a")

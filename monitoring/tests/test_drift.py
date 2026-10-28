@@ -115,3 +115,61 @@ def test_alert_reason_names_the_rule_that_fired():
     assert alert_reason({**base, "drifted_columns": ["a"]}) == "score"
     assert alert_reason({**base, "missing_shift_columns": ["a"]}) == "missing"
     assert alert_reason({"drifted_columns": ["a"], "missing_shift_columns": ["b"]}) == "both"
+
+
+def test_calibration_uses_a_floor_and_a_safety_factor():
+    from drift import calibrate_thresholds
+
+    normal = [
+        {"scores": {"noisy": 0.10, "quiet": 0.01}, "missing_shifts": {"noisy": 0.10, "quiet": 0.0}},
+        {"scores": {"noisy": 0.06, "quiet": 0.02}, "missing_shifts": {"noisy": 0.04, "quiet": 0.0}},
+    ]
+    limits = calibrate_thresholds(normal, ["noisy", "quiet"], 1.25, 0.05, 0.02)
+    assert limits["noisy"]["score"] == pytest.approx(0.125)
+    assert limits["quiet"]["score"] == pytest.approx(0.05)  # 1.25 * 0.02 is below the floor
+    assert limits["noisy"]["missing_shift"] == pytest.approx(0.125)
+    assert limits["quiet"]["missing_shift"] == pytest.approx(0.02)
+
+
+def test_per_column_limits_catch_a_small_shift_in_a_quiet_column_only():
+    from drift import judge
+
+    measured = {
+        "rows": 10,
+        "scores": {"noisy": 0.116, "quiet": 0.058},
+        "missing_shifts": {"noisy": 0.0, "quiet": 0.0},
+    }
+    per_column = judge(measured, {"noisy": 0.125, "quiet": 0.05}, {"noisy": 0.125, "quiet": 0.02})
+    assert per_column["drifted_columns"] == ["quiet"]
+    assert per_column["alert"]
+    # one global threshold gets it backwards: it flags the noisy column, misses the quiet one
+    assert judge(measured, 0.1, 0.1)["drifted_columns"] == ["noisy"]
+
+
+def test_calibration_rejects_an_empty_window_list():
+    from drift import calibrate_thresholds
+
+    with pytest.raises(ValueError):
+        calibrate_thresholds([], ["a"], 1.25, 0.05, 0.02)
+
+
+def test_presence_rates():
+    from drift import presence_rates
+
+    frame = pd.DataFrame({"a": [1.0, np.nan, 3.0, np.nan], "b": [1, 2, 3, 4]})
+    assert presence_rates(frame, ["a", "b"]) == {"a": 0.5, "b": 1.0}
+
+
+def test_validation_and_test_windows_are_never_used_for_calibration():
+    monitor = yaml.safe_load((ROOT / "monitoring" / "config.yaml").read_text())
+    assert any(w.get("calibrate") for w in monitor["windows"])
+    for window in monitor["windows"]:
+        if window["name"].startswith(("validation", "test")):
+            assert not window.get("calibrate"), window["name"]
+
+
+def test_fired_lists_value_and_missingness_columns():
+    from run_monitor import fired
+
+    assert fired({"drifted_columns": ["a"], "missing_shift_columns": ["b"]}) == "a,b(miss)"
+    assert fired({"drifted_columns": [], "missing_shift_columns": []}) == "-"

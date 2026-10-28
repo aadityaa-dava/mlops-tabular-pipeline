@@ -58,24 +58,77 @@ def missing_rate_shifts(
     }
 
 
+def presence_rates(frame: pd.DataFrame, columns: list[str]) -> dict[str, float]:
+    """Share of rows in which each column has a value."""
+    return {c: float(frame[c].notna().mean()) for c in columns}
+
+
+def measure_window(
+    reference: pd.DataFrame,
+    current: pd.DataFrame,
+    columns: list[str],
+    categorical: list[str],
+) -> dict:
+    """The raw measurements for one window: drift scores and missing-share shifts."""
+    return {
+        "rows": len(current),
+        "scores": drift_scores(reference, current, columns, categorical),
+        "missing_shifts": missing_rate_shifts(reference, current, columns),
+    }
+
+
+def limit_for(threshold: float | dict[str, float], column: str) -> float:
+    """A threshold is either one number for every column or a limit per column."""
+    return threshold[column] if isinstance(threshold, dict) else threshold
+
+
+def judge(
+    measured: dict,
+    score_threshold: float | dict[str, float],
+    missing_threshold: float | dict[str, float],
+) -> dict:
+    """Apply thresholds to a measurement and flag the columns that reach them."""
+    drifted = sorted(c for c, s in measured["scores"].items() if s >= limit_for(score_threshold, c))
+    shifted = sorted(
+        c for c, s in measured["missing_shifts"].items() if s >= limit_for(missing_threshold, c)
+    )
+    return {
+        **measured,
+        "drifted_columns": drifted,
+        "missing_shift_columns": shifted,
+        "alert": bool(drifted or shifted),
+    }
+
+
 def evaluate_window(
     reference: pd.DataFrame,
     current: pd.DataFrame,
     columns: list[str],
     categorical: list[str],
-    score_threshold: float,
-    missing_threshold: float,
+    score_threshold: float | dict[str, float],
+    missing_threshold: float | dict[str, float],
 ) -> dict:
-    """Scores, missingness shifts and an alert flag for one current window."""
-    scores = drift_scores(reference, current, columns, categorical)
-    shifts = missing_rate_shifts(reference, current, columns)
-    drifted = sorted(c for c, s in scores.items() if s >= score_threshold)
-    shifted = sorted(c for c, s in shifts.items() if s >= missing_threshold)
-    return {
-        "rows": len(current),
-        "scores": scores,
-        "missing_shifts": shifts,
-        "drifted_columns": drifted,
-        "missing_shift_columns": shifted,
-        "alert": bool(drifted or shifted),
-    }
+    """Measure one window and judge it against the given thresholds."""
+    measured = measure_window(reference, current, columns, categorical)
+    return judge(measured, score_threshold, missing_threshold)
+
+
+def calibrate_thresholds(
+    normal_windows: list[dict],
+    columns: list[str],
+    safety_factor: float,
+    score_floor: float,
+    missing_floor: float,
+) -> dict[str, dict[str, float]]:
+    """Per-column limits: max(floor, safety_factor * the largest value seen in normal windows)."""
+    if not normal_windows:
+        raise ValueError("need at least one normal window to calibrate on")
+    limits = {}
+    for c in columns:
+        top_score = max(w["scores"][c] for w in normal_windows)
+        top_shift = max(w["missing_shifts"][c] for w in normal_windows)
+        limits[c] = {
+            "score": max(score_floor, safety_factor * top_score),
+            "missing_shift": max(missing_floor, safety_factor * top_shift),
+        }
+    return limits

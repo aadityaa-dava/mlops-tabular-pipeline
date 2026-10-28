@@ -14,16 +14,69 @@
   "categorical_columns": [
     "P_emaildomain"
   ],
-  "thresholds": {
-    "column_score": 0.2,
-    "missing_rate_shift": 0.2
-  },
   "reference": {
     "start_day": 0,
     "end_day": 120,
     "sample_rows": 100000,
     "seed": 0,
     "rows": 100000
+  },
+  "global_thresholds": {
+    "column_score": 0.2,
+    "missing_rate_shift": 0.2
+  },
+  "calibration": {
+    "safety_factor": 1.25,
+    "score_floor": 0.05,
+    "missing_shift_floor": 0.02,
+    "windows": [
+      "train days 0-30 (in reference)",
+      "train days 30-60 (in reference)",
+      "train days 60-90 (in reference)",
+      "train days 90-120 (in reference)"
+    ],
+    "limits": {
+      "V258": {
+        "score": 0.087781,
+        "missing_shift": 0.201288
+      },
+      "C1": {
+        "score": 0.138322,
+        "missing_shift": 0.02
+      },
+      "C13": {
+        "score": 0.086025,
+        "missing_shift": 0.02
+      },
+      "card1": {
+        "score": 0.05,
+        "missing_shift": 0.02
+      },
+      "card2": {
+        "score": 0.063205,
+        "missing_shift": 0.02
+      },
+      "TransactionAmt": {
+        "score": 0.05,
+        "missing_shift": 0.02
+      },
+      "addr1": {
+        "score": 0.05,
+        "missing_shift": 0.02
+      },
+      "C14": {
+        "score": 0.126378,
+        "missing_shift": 0.02
+      },
+      "P_emaildomain": {
+        "score": 0.051312,
+        "missing_shift": 0.037375
+      },
+      "D2": {
+        "score": 0.060242,
+        "missing_shift": 0.110137
+      }
+    }
   },
   "windows": {
     "null: two random halves of train": {
@@ -52,9 +105,16 @@
         "P_emaildomain": 0.00392,
         "D2": 0.00074
       },
-      "drifted_columns": [],
-      "missing_shift_columns": [],
-      "alert": false
+      "global": {
+        "drifted_columns": [],
+        "missing_shift_columns": [],
+        "alert": false
+      },
+      "per_column": {
+        "drifted_columns": [],
+        "missing_shift_columns": [],
+        "alert": false
+      }
     },
     "train days 0-30 (in reference)": {
       "rows": 50000,
@@ -82,9 +142,16 @@
         "P_emaildomain": 0.00804,
         "D2": 0.08811
       },
-      "drifted_columns": [],
-      "missing_shift_columns": [],
-      "alert": false
+      "global": {
+        "drifted_columns": [],
+        "missing_shift_columns": [],
+        "alert": false
+      },
+      "per_column": {
+        "drifted_columns": [],
+        "missing_shift_columns": [],
+        "alert": false
+      }
     },
     "train days 30-60 (in reference)": {
       "rows": 50000,
@@ -112,9 +179,16 @@
         "P_emaildomain": 0.0299,
         "D2": 0.04899
       },
-      "drifted_columns": [],
-      "missing_shift_columns": [],
-      "alert": false
+      "global": {
+        "drifted_columns": [],
+        "missing_shift_columns": [],
+        "alert": false
+      },
+      "per_column": {
+        "drifted_columns": [],
+        "missing_shift_columns": [],
+        "alert": false
+      }
     },
     "train days 60-90 (in reference)": {
       "rows": 50000,
@@ -142,9 +216,16 @@
         "P_emaildomain": 0.00582,
         "D2": 0.04573
       },
-      "drifted_columns": [],
-      "missing_shift_columns": [],
-      "alert": false
+      "global": {
+        "drifted_columns": [],
+        "missing_shift_columns": [],
+        "alert": false
+      },
+      "per_column": {
+        "drifted_columns": [],
+        "missing_shift_columns": [],
+        "alert": false
+      }
     },
     "train days 90-120 (in reference)": {
       "rows": 50000,
@@ -172,9 +253,16 @@
         "P_emaildomain": 0.01,
         "D2": 0.02923
       },
-      "drifted_columns": [],
-      "missing_shift_columns": [],
-      "alert": false
+      "global": {
+        "drifted_columns": [],
+        "missing_shift_columns": [],
+        "alert": false
+      },
+      "per_column": {
+        "drifted_columns": [],
+        "missing_shift_columns": [],
+        "alert": false
+      }
     },
     "validation days 120-150": {
       "rows": 50000,
@@ -202,9 +290,18 @@
         "P_emaildomain": 0.00498,
         "D2": 0.07931
       },
-      "drifted_columns": [],
-      "missing_shift_columns": [],
-      "alert": false
+      "global": {
+        "drifted_columns": [],
+        "missing_shift_columns": [],
+        "alert": false
+      },
+      "per_column": {
+        "drifted_columns": [
+          "D2"
+        ],
+        "missing_shift_columns": [],
+        "alert": true
+      }
     },
     "test days 150-183 (features only)": {
       "rows": 50000,
@@ -232,9 +329,18 @@
         "P_emaildomain": 0.0249,
         "D2": 0.08453
       },
-      "drifted_columns": [],
-      "missing_shift_columns": [],
-      "alert": false
+      "global": {
+        "drifted_columns": [],
+        "missing_shift_columns": [],
+        "alert": false
+      },
+      "per_column": {
+        "drifted_columns": [
+          "D2"
+        ],
+        "missing_shift_columns": [],
+        "alert": true
+      }
     }
   }
 }

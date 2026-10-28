@@ -12,17 +12,19 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from drift import evaluate_window, load_watchlist
+from drift import (
+    calibrate_thresholds,
+    judge,
+    load_watchlist,
+    measure_window,
+)
 from run_monitor import alert_reason, rounded
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
 SECONDS_PER_DAY = 86_400
 UNSEEN_CATEGORY = "new-domain.example"
-HEADER = (
-    f"{'scenario':44s} {'target':>7s} {'miss.shift':>10s} "
-    f"{'detected':>8s} {'fires on':>8s} {'worst other':>11s}"
-)
+HEADER = f"{'scenario':44s} {'target':>7s} {'miss.shift':>10s} {'global':>7s} {'per-col':>8s}"
 
 
 def scale_column(df: pd.DataFrame, col: str, factor: float) -> pd.DataFrame:
@@ -59,12 +61,17 @@ def replace_fraction(
     return out
 
 
-def first_detected(rows: list[dict]) -> float | None:
+def first_detected(rows: list[dict], key: str = "target_detected") -> float | None:
     """Smallest magnitude at which the target column itself trips a rule, or None."""
     for row in sorted(rows, key=lambda r: r["magnitude"]):
-        if row["target_detected"]:
+        if row[key]:
             return row["magnitude"]
     return None
+
+
+def target_tripped(res: dict, col: str) -> bool:
+    """Whether the altered column itself reached a limit (either rule)."""
+    return col in res["drifted_columns"] or col in res["missing_shift_columns"]
 
 
 def build_scenarios(sim: dict, reference: pd.DataFrame, seed: int) -> list[dict]:
@@ -130,56 +137,91 @@ def main() -> None:
     day = df["TransactionDT"] / SECONDS_PER_DAY
     ref_cfg = cfg["reference"]
     train = df[(day >= ref_cfg["start_day"]) & (day < ref_cfg["end_day"])]
-    reference = train.sample(ref_cfg["sample_rows"], random_state=ref_cfg["seed"])[columns]
+    reference_full = train.sample(ref_cfg["sample_rows"], random_state=ref_cfg["seed"])
+    reference = reference_full[columns]
     win = sim["base_window"]
     window = df[(day >= win["start_day"]) & (day < win["end_day"])]
     n_rows = min(cfg["current"]["sample_rows"], len(window))
     base = window.sample(n_rows, random_state=cfg["current"]["seed"])[columns]
     th = cfg["thresholds"]
+    cal = cfg["calibration"]
+    normal = []
+    for w in cfg["windows"]:
+        if w.get("calibrate"):
+            block = df[(day >= w["start_day"]) & (day < w["end_day"])]
+            block = block.sample(
+                min(cfg["current"]["sample_rows"], len(block)),
+                random_state=cfg["current"]["seed"],
+            )[columns]
+            normal.append(measure_window(reference, block, columns, categorical))
+    limits = calibrate_thresholds(
+        normal, columns, cal["safety_factor"], cal["score_floor"], cal["missing_shift_floor"]
+    )
+    score_limits = {c: t["score"] for c, t in limits.items()}
+    missing_limits = {c: t["missing_shift"] for c, t in limits.items()}
 
     def evaluate(current: pd.DataFrame) -> dict:
-        return evaluate_window(
-            reference, current, columns, categorical, th["column_score"], th["missing_rate_shift"]
-        )
+        measured = measure_window(reference, current, columns, categorical)
+        return {
+            "measured": measured,
+            "global": judge(measured, th["column_score"], th["missing_rate_shift"]),
+            "per_column": judge(measured, score_limits, missing_limits),
+        }
 
     baseline = evaluate(base)
     print(f"pandas {pd.__version__} | base window: {win['name']} ({len(base)} rows)")
-    print("baseline scores:", {c: round(s, 3) for c, s in baseline["scores"].items()})
-    print(f"baseline fires on: {alert_reason(baseline)}\n")
+    print("baseline scores:", {c: round(s, 3) for c, s in baseline["measured"]["scores"].items()})
+    print(
+        f"baseline fires: global {alert_reason(baseline['global'])}, "
+        f"per-column {alert_reason(baseline['per_column'])} "
+        f"({', '.join(baseline['per_column']['drifted_columns']) or '-'})\n"
+    )
 
     rows = []
     print(HEADER)
     for sc in build_scenarios(sim, reference, sim["seed"]):
-        res = evaluate(sc["apply"](base))
+        both = evaluate(sc["apply"](base))
         col = sc["column"]
-        others = [v for c, v in res["scores"].items() if c != col]
+        measured = both["measured"]
         row = {
             "family": sc["family"],
             "column": col,
             "magnitude": sc["magnitude"],
             "label": sc["label"],
-            "target_score": res["scores"][col],
-            "target_missing_shift": res["missing_shifts"][col],
-            "target_detected": col in res["drifted_columns"] or col in res["missing_shift_columns"],
-            "fires_on": alert_reason(res),
-            "worst_other_score": max(others),
+            "target_score": measured["scores"][col],
+            "target_missing_shift": measured["missing_shifts"][col],
+            "target_detected_global": target_tripped(both["global"], col),
+            "target_detected": target_tripped(both["per_column"], col),
+            "other_columns_fired": sorted(set(both["per_column"]["drifted_columns"]) - {col}),
         }
         rows.append(row)
         print(
             f"{row['label']:44s} {row['target_score']:7.3f} {row['target_missing_shift']:10.3f} "
-            f"{row['target_detected']!s:>8s} {row['fires_on']:>8s} {row['worst_other_score']:11.3f}"
+            f"{'yes' if row['target_detected_global'] else '-':>7s} "
+            f"{'yes' if row['target_detected'] else '-':>8s}"
         )
 
-    print("\nsmallest shift where the target column trips a rule:")
+    print("\nsmallest shift where the target column trips a rule (global -> per-column):")
     summary = {}
     for family in dict.fromkeys(r["family"] for r in rows):
         family_rows = [r for r in rows if r["family"] == family]
+        found_global = first_detected(family_rows, "target_detected_global")
         found = first_detected(family_rows)
-        summary[family] = found
-        text = "not detected in the range tested" if found is None else found
-        print(f"  {family} ({family_rows[0]['column']}): {text}")
+        summary[family] = {"global": found_global, "per_column": found}
+        g = "not detected" if found_global is None else found_global
+        p = "not detected" if found is None else found
+        print(f"  {family} ({family_rows[0]['column']}): {g} -> {p}")
+    fires = ", ".join(baseline["per_column"]["drifted_columns"]) or "none"
+    print(f"\nper-column rule fires on the unaltered window: {fires}")
 
-    report = {"thresholds": th, "base_window": win, "summary": summary, "rows": rows}
+    report = {
+        "global_thresholds": th,
+        "per_column_limits": limits,
+        "base_window": win,
+        "baseline_per_column_fires": baseline["per_column"]["drifted_columns"],
+        "summary": summary,
+        "rows": rows,
+    }
     out = ROOT / sim["report_path"]
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(rounded(report), indent=2) + "\n")

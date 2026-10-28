@@ -1,18 +1,75 @@
 {
-  "thresholds": {
+  "global_thresholds": {
     "column_score": 0.2,
     "missing_rate_shift": 0.2
+  },
+  "per_column_limits": {
+    "V258": {
+      "score": 0.087781,
+      "missing_shift": 0.201288
+    },
+    "C1": {
+      "score": 0.138322,
+      "missing_shift": 0.02
+    },
+    "C13": {
+      "score": 0.086025,
+      "missing_shift": 0.02
+    },
+    "card1": {
+      "score": 0.05,
+      "missing_shift": 0.02
+    },
+    "card2": {
+      "score": 0.063205,
+      "missing_shift": 0.02
+    },
+    "TransactionAmt": {
+      "score": 0.05,
+      "missing_shift": 0.02
+    },
+    "addr1": {
+      "score": 0.05,
+      "missing_shift": 0.02
+    },
+    "C14": {
+      "score": 0.126378,
+      "missing_shift": 0.02
+    },
+    "P_emaildomain": {
+      "score": 0.051312,
+      "missing_shift": 0.037375
+    },
+    "D2": {
+      "score": 0.060242,
+      "missing_shift": 0.110137
+    }
   },
   "base_window": {
     "name": "validation days 120-150",
     "start_day": 120,
     "end_day": 150
   },
+  "baseline_per_column_fires": [
+    "D2"
+  ],
   "summary": {
-    "scale": 1.5,
-    "mean_shift": 0.25,
-    "blank": null,
-    "new_category": 0.1
+    "scale": {
+      "global": 1.5,
+      "per_column": 1.1
+    },
+    "mean_shift": {
+      "global": 0.25,
+      "per_column": 0.1
+    },
+    "blank": {
+      "global": null,
+      "per_column": null
+    },
+    "new_category": {
+      "global": 0.1,
+      "per_column": 0.05
+    }
   },
   "rows": [
     {
@@ -22,9 +79,11 @@
       "label": "TransactionAmt x1.05",
       "target_score": 0.031492,
       "target_missing_shift": 0.0,
+      "target_detected_global": false,
       "target_detected": false,
-      "fires_on": "-",
-      "worst_other_score": 0.079758
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "scale",
@@ -33,9 +92,11 @@
       "label": "TransactionAmt x1.1",
       "target_score": 0.057558,
       "target_missing_shift": 0.0,
-      "target_detected": false,
-      "fires_on": "-",
-      "worst_other_score": 0.079758
+      "target_detected_global": false,
+      "target_detected": true,
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "scale",
@@ -44,9 +105,11 @@
       "label": "TransactionAmt x1.2",
       "target_score": 0.115516,
       "target_missing_shift": 0.0,
-      "target_detected": false,
-      "fires_on": "-",
-      "worst_other_score": 0.079758
+      "target_detected_global": false,
+      "target_detected": true,
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "scale",
@@ -55,9 +118,11 @@
       "label": "TransactionAmt x1.5",
       "target_score": 0.290685,
       "target_missing_shift": 0.0,
+      "target_detected_global": true,
       "target_detected": true,
-      "fires_on": "score",
-      "worst_other_score": 0.079758
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "scale",
@@ -66,9 +131,11 @@
       "label": "TransactionAmt x2.0",
       "target_score": 0.582658,
       "target_missing_shift": 0.0,
+      "target_detected_global": true,
       "target_detected": true,
-      "fires_on": "score",
-      "worst_other_score": 0.079758
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "mean_shift",
@@ -77,9 +144,11 @@
       "label": "C13 + 0.1 std",
       "target_score": 0.144246,
       "target_missing_shift": 0.0,
-      "target_detected": false,
-      "fires_on": "-",
-      "worst_other_score": 0.079758
+      "target_detected_global": false,
+      "target_detected": true,
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "mean_shift",
@@ -88,9 +157,11 @@
       "label": "C13 + 0.25 std",
       "target_score": 0.293148,
       "target_missing_shift": 0.0,
+      "target_detected_global": true,
       "target_detected": true,
-      "fires_on": "score",
-      "worst_other_score": 0.079758
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "mean_shift",
@@ -99,9 +170,11 @@
       "label": "C13 + 0.5 std",
       "target_score": 0.541497,
       "target_missing_shift": 0.0,
+      "target_detected_global": true,
       "target_detected": true,
-      "fires_on": "score",
-      "worst_other_score": 0.079758
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "mean_shift",
@@ -110,9 +183,11 @@
       "label": "C13 + 1.0 std",
       "target_score": 1.038635,
       "target_missing_shift": 0.0,
+      "target_detected_global": true,
       "target_detected": true,
-      "fires_on": "score",
-      "worst_other_score": 0.079758
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "blank",
@@ -121,9 +196,11 @@
       "label": "V258: 5% of values go missing",
       "target_score": 0.072339,
       "target_missing_shift": 0.10005,
+      "target_detected_global": false,
       "target_detected": false,
-      "fires_on": "-",
-      "worst_other_score": 0.079758
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "blank",
@@ -132,9 +209,11 @@
       "label": "V258: 10% of values go missing",
       "target_score": 0.074807,
       "target_missing_shift": 0.10769,
+      "target_detected_global": false,
       "target_detected": false,
-      "fires_on": "-",
-      "worst_other_score": 0.079758
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "blank",
@@ -143,9 +222,11 @@
       "label": "V258: 20% of values go missing",
       "target_score": 0.061897,
       "target_missing_shift": 0.12301,
+      "target_detected_global": false,
       "target_detected": false,
-      "fires_on": "-",
-      "worst_other_score": 0.079758
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "blank",
@@ -154,9 +235,11 @@
       "label": "V258: 30% of values go missing",
       "target_score": 0.065522,
       "target_missing_shift": 0.13831,
+      "target_detected_global": false,
       "target_detected": false,
-      "fires_on": "-",
-      "worst_other_score": 0.079758
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "blank",
@@ -165,9 +248,11 @@
       "label": "V258: 50% of values go missing",
       "target_score": 0.053467,
       "target_missing_shift": 0.16893,
+      "target_detected_global": false,
       "target_detected": false,
-      "fires_on": "-",
-      "worst_other_score": 0.079758
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "new_category",
@@ -176,9 +261,11 @@
       "label": "P_emaildomain: 5% rows get a new value",
       "target_score": 0.14864,
       "target_missing_shift": 0.00282,
-      "target_detected": false,
-      "fires_on": "-",
-      "worst_other_score": 0.079758
+      "target_detected_global": false,
+      "target_detected": true,
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "new_category",
@@ -187,9 +274,11 @@
       "label": "P_emaildomain: 10% rows get a new value",
       "target_score": 0.208578,
       "target_missing_shift": 0.01108,
+      "target_detected_global": true,
       "target_detected": true,
-      "fires_on": "score",
-      "worst_other_score": 0.079758
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "new_category",
@@ -198,9 +287,11 @@
       "label": "P_emaildomain: 20% rows get a new value",
       "target_score": 0.296747,
       "target_missing_shift": 0.02758,
+      "target_detected_global": true,
       "target_detected": true,
-      "fires_on": "score",
-      "worst_other_score": 0.079758
+      "other_columns_fired": [
+        "D2"
+      ]
     },
     {
       "family": "new_category",
@@ -209,9 +300,11 @@
       "label": "P_emaildomain: 40% rows get a new value",
       "target_score": 0.431421,
       "target_missing_shift": 0.06018,
+      "target_detected_global": true,
       "target_detected": true,
-      "fires_on": "score",
-      "worst_other_score": 0.079758
+      "other_columns_fired": [
+        "D2"
+      ]
     }
   ]
 }
