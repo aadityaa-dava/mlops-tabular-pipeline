@@ -2,8 +2,32 @@
 
 An end-to-end ML pipeline for card-transaction fraud detection (IEEE-CIS dataset):
 versioned data, a config-driven reproducible pipeline, tracked experiments, a model
-registry with a written promotion policy, and tests. Serving, CI/CD, deployment and
-drift monitoring are in progress.
+registry with a written promotion policy, and tests. A FastAPI service ships as a Docker image through CI/CD to a free-tier host, with drift
+monitoring and a local retraining comparison.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph data["Data (versioned)"]
+        raw["Raw CSVs<br/>DVC pointers in git<br/>remote: local folder"] --> merge["merge<br/>(DVC stage)"]
+        merge --> validate["validate<br/>pandera schema"]
+        validate --> train["train<br/>LightGBM, config-driven"]
+    end
+    train --> mlflow["MLflow<br/>params, metrics, data hashes,<br/>registry (champion alias)"]
+    mlflow --> export["export<br/>artifacts/champion/<br/>model + categories + importance"]
+    export --> git["git: code + exported model"]
+    git --> ci["GitHub Actions<br/>lint, tests, monitoring tests,<br/>build, health check"]
+    ci --> ghcr["GHCR image<br/>tagged with commit SHA"]
+    ghcr --> render["Render free tier<br/>FastAPI /health /predict"]
+    export -. "watchlist" .-> monitor["monitoring/<br/>Evidently, pandas 2,<br/>per-column limits"]
+    raw -. "windows" .-> monitor
+    monitor --> report["drift reports"]
+    export --> retrain["retrain<br/>paired comparison on<br/>days 135-150"]
+    retrain --> candidate["artifacts/candidate<br/>staging, manual promotion"]
+```
+
+Solid arrows are code that runs; dotted arrows are file reads between separate environments. What is not connected is listed in `docs/architecture.md`.
 
 ## Status
 
@@ -15,7 +39,7 @@ drift monitoring are in progress.
 | FastAPI serving, Docker image, CI/CD to GHCR | done |
 | cloud deployment (Render free tier) | done |
 | drift monitoring (own environment, per-column limits, sensitivity simulation) | done |
-| retraining trigger | not started |
+| retraining comparison (local; promotion is manual) | done |
 
 ## Results (test window, scored once)
 
@@ -113,6 +137,73 @@ files, not code: the model export folder lists which features matter
 
 Details and numbers: `docs/monitoring.md`.
 
+## Retraining
+
+    make retrain     train a candidate on days 0-135, compare it with the champion on days 135-150
+
+Both models are scored on the same rows and the difference in PR-AUC gets a paired bootstrap
+interval. The candidate must gain at least 0.02, the interval must exclude zero, recall at the 5%
+alert budget may not drop by more than 0.01, and the reloaded model must reproduce its own
+scores. The 0.02 comes from a measurement: retraining on the same days with a different seed
+moved PR-AUC by +0.0036 (interval -0.0027 to +0.0111), so a 0.01 margin is inside the noise.
+
+Result: champion 0.5257, candidate 0.6135 on days 135-150 (+0.0878, interval +0.0776 to
++0.0981). Read it with its limits: the candidate's training data ends the day before the
+comparison window starts, and earlier experiments showed that recency alone is worth about
+0.07 PR-AUC, so this mostly shows what fresh data buys. It is one window, and early stopping
+used it. The command stops at a staged candidate (`artifacts/candidate/`, git-ignored): the
+champion, the registry and the deployed image are not touched, and there is no promote command
+on purpose. Retraining runs locally because the data does not exist on any cloud machine.
+
+## Decisions and trade-offs
+
+- **Evaluation.** Time-based split on `TransactionDT` (train days 0-120, validation 120-150,
+  test 150-183), PR-AUC as the primary metric, test window scored once. Test PR-AUC is 0.549
+  against a random-guess level of 0.035.
+- **Features.** Ten engineered row-wise features did not beat seed noise across four seeds
+  (mean difference +0.0007), so the production model uses the raw columns.
+- **Serving.** The model ships inside the image as a 6 MB exported folder, so the container
+  needs neither MLflow nor the data. The cost: a new model means a new image.
+- **Monitoring.** Evidently runs in its own pandas 2 environment (see Monitoring). Limits are
+  per column, because one global threshold could not separate a 20% inflation of amounts from
+  normal variation in other columns.
+- **Hosting.** Render's free tier, because AWS, Google Cloud and Azure all asked for a payment
+  method at signup in the documentation I read on 2026-10-27, and Hugging Face Docker Spaces
+  needed a paid plan. Whether Render's own signup asked for one was not recorded.
+- **Promotion.** A written, tested rule, and manual replacement of the champion.
+
+## What broke
+
+- **DVC ignored its own pointer files.** A `.gitignore` rule on the whole `data/raw/` folder hid
+  the `.dvc` files from DVC's scan, so a bare `dvc pull` said "up to date" and then deleted the
+  CSVs. Explicit commands still worked, so only a fresh-clone test exposed it. Ignoring by file
+  type fixed it.
+- **A silent downgrade.** `uv add mlflow` installed MLflow 1.27.0 (2022), because `pyarrow>=26`
+  conflicted with every 3.x release, and it crashed on import. Capping pyarrow fixed it.
+- **A tag that does not exist.** `setup-uv@v10` failed the first publish run at job setup.
+  Pinning the full version tag fixed it.
+- **A wrong port.** Render scanned port 1000 while the app listened on 8000, and the deploy failed
+  although the app had started. Setting `PORT=8000` fixed it.
+- **A dependency that resolves but cannot import.** Evidently installed cleanly and crashed on
+  import under pandas 3.1, and CI did not notice because no test imported it. The fix was a
+  separate environment, and the lesson was to run the import before committing the dependency.
+- **A rule I overclaimed.** I believed the missing-values check would catch a feed that stops. The
+  simulation showed a sparse column (`V258`) losing half its values goes undetected, and the unit
+  test had used a column that was 40% missing, which is far easier than the real data.
+- **A gain that was seed luck.** Engineered features looked like +0.0067 PR-AUC on seed 42 and
+  were indistinguishable from zero over four seeds.
+- **A margin inside the noise.** The 0.01 promotion margin turned out to be about the size of the
+  seed-to-seed wobble on a 15-day window, which led to the paired rule above.
+
+## Next steps
+
+- Authentication and rate limiting: the public endpoint has neither.
+- A shared DVC remote, so cloud jobs can pull data (needs an account and possibly a card).
+- Redeploy Render on a newer image, which also turns on prediction logging, and measure a cold start.
+- A rule for sparse columns that stop arriving, calibrated per column.
+- A fresh holdout and delayed labels, so retraining and decay can be judged on data nobody tuned on.
+- A promote command, after more than one comparison window supports it.
+
 ## Layout
 
     configs/config.yaml     all settings (split cutoffs, seed, hyperparameters, MLflow names)
@@ -120,6 +211,9 @@ Details and numbers: `docs/monitoring.md`.
     src/mlops_pipeline/     data, schema, split, features, models, tracking, registry
     tests/                  unit tests
     docs/                   problem framing, EDA findings, results log, promotion policy
+    monitoring/             drift monitoring in its own environment (pandas 2, Evidently)
+    artifacts/champion/     exported model served by the API
+    Dockerfile, .github/    image build and CI/CD
 
 ## Honest notes
 
