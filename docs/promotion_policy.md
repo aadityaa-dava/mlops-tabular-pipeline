@@ -43,3 +43,15 @@ Candidate and reference must be scored on the same fixed window.
   selection set.
 - A rejected candidate is a normal outcome (exit code 0, reason printed), not an error.
 - Still open (Phase 12): a fresh holdout for comparing retrained models.
+
+## Amendment (Step 80): paired comparison for retrained candidates
+Measured on days 135-150 (39,533 rows, 1,299 frauds): a retrain with the same training days and
+a different seed moved PR-AUC by +0.0036 (paired 95% interval -0.0027 to +0.0111), so the
+original 0.01 margin sits at the noise level of a window this size. A candidate trained on 15
+more recent days scored +0.0878 (interval +0.0776 to +0.0981) over the champion.
+For retrained candidates the rule is therefore: PR-AUC gain of at least 0.02 over the champion
+on the same rows, a paired bootstrap interval that excludes zero, recall@5% not more than 0.01
+lower, and a passing reload round trip. The 0.02 was set after seeing these numbers, so they
+cannot validate it. The B result is largely the recency effect (its training data ends the
+day before the comparison window), so it shows what retraining on fresh data buys, not a
+better model in a deeper sense. Early stopping used the comparison window for both models.

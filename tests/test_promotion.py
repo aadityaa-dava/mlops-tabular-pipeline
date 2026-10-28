@@ -71,3 +71,33 @@ def test_different_window_is_refused():
 
 def test_missing_window_info_is_refused():
     assert window_mismatch(WINDOW, {"train_end_day": "120.0"}) is not None
+
+
+from mlops_pipeline.promotion import should_promote_paired  # noqa: E402
+
+
+def test_same_data_retrain_measured_on_days_135_150_is_rejected():
+    # candidate A: +0.0036, interval -0.0027 to +0.0111
+    decision = should_promote_paired(0.0036, -0.0027, recall_drop=0.0, roundtrip_diff=0.0)
+    assert not decision.promote
+    assert "below the required" in decision.reason
+
+
+def test_more_recent_data_retrain_measured_on_days_135_150_is_accepted():
+    # candidate B: +0.0878, interval +0.0776 to +0.0981
+    assert should_promote_paired(0.0878, 0.0776, recall_drop=0.0, roundtrip_diff=0.0).promote
+
+
+def test_a_gain_above_the_margin_is_rejected_when_the_interval_touches_zero():
+    decision = should_promote_paired(0.03, -0.001, recall_drop=0.0, roundtrip_diff=0.0)
+    assert not decision.promote
+    assert "noise" in decision.reason
+
+
+def test_paired_rule_keeps_the_recall_guardrail_and_the_roundtrip_check():
+    assert not should_promote_paired(0.05, 0.03, recall_drop=0.05, roundtrip_diff=0.0).promote
+    assert not should_promote_paired(0.05, 0.03, recall_drop=0.0, roundtrip_diff=1e-3).promote
+
+
+def test_margin_boundary_is_inclusive_in_the_paired_rule():
+    assert should_promote_paired(0.02, 0.005, recall_drop=0.0, roundtrip_diff=0.0).promote

@@ -57,3 +57,35 @@ def window_mismatch(
         if a is None or b is None or a != b:
             return f"{key} differs or is missing (candidate {a}, reference {b})"
     return None
+
+
+PAIRED_MARGIN = 0.02  # about twice the no-change retrain wobble measured on days 135-150
+PAIRED_CONFIDENCE = "95% paired bootstrap interval must exclude zero"
+
+
+def should_promote_paired(
+    diff: float,
+    interval_low: float,
+    recall_drop: float,
+    roundtrip_diff: float,
+    margin: float = PAIRED_MARGIN,
+    recall_tolerance: float = RECALL_TOLERANCE,
+) -> Decision:
+    """Promote only on a clear, paired improvement on the same rows.
+
+    diff is candidate minus champion PR-AUC; interval_low is the lower end of its paired
+    bootstrap interval. The gain must reach the margin AND the interval must exclude zero.
+    """
+    if roundtrip_diff > ROUNDTRIP_TOLERANCE:
+        return Decision(False, "candidate does not reproduce its own scores after reloading")
+    if diff < margin - _EPS:
+        return Decision(False, f"PR-AUC gain {diff:+.4f} is below the required {margin:.4f}")
+    if interval_low <= 0:
+        reason = f"gain {diff:+.4f} is not separable from noise (interval low {interval_low:+.4f})"
+        return Decision(False, reason)
+    if recall_drop > recall_tolerance + _EPS:
+        return Decision(
+            False,
+            f"recall@5% drops {recall_drop:.4f}, more than the allowed {recall_tolerance:.4f}",
+        )
+    return Decision(True, f"gain {diff:+.4f} meets the margin and its interval excludes zero")
