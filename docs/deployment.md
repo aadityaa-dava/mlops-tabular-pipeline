@@ -12,12 +12,14 @@ Health check path: /health.
 ## Measured (rough)
 - Warm predict, 2 transactions over the internet: about 1.1 s.
 - Startup on Render: about 18 s from service start to the app answering.
-- Not yet measured: a cold start after more than 15 idle minutes.
+- Not yet measured properly: a cold start after more than 15 idle minutes. One
+  incidental observation: a request to /docs after a long idle period took 22 s (the
+  service was probably asleep, but this was not a controlled test).
 
 ## Why Render
 AWS, Google Cloud and Azure require a payment method at signup, and Hugging Face Docker
 Spaces now need a paid plan, so Render's free tier was the option that needed no payment
-method up front. Whether Render's signup asked for a card has not been confirmed here.
+method up front. Render's signup did not ask for a card or any payment details (reported by the author when the service was created).
 
 ## Updating
 Edit the image tag in the service settings (or use Manual Deploy) after CI publishes a new

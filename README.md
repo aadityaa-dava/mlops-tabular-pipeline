@@ -169,7 +169,7 @@ on purpose. Retraining runs locally because the data does not exist on any cloud
   normal variation in other columns.
 - **Hosting.** Render's free tier, because AWS, Google Cloud and Azure all asked for a payment
   method at signup in the documentation I read on 2026-10-27, and Hugging Face Docker Spaces
-  needed a paid plan. Whether Render's own signup asked for one was not recorded.
+  needed a paid plan. Render's own signup did not ask for a payment method when this was set up.
 - **Promotion.** A written, tested rule, and manual replacement of the champion.
 
 ## What broke
