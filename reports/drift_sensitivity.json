@@ -1,0 +1,217 @@
+{
+  "thresholds": {
+    "column_score": 0.2,
+    "missing_rate_shift": 0.2
+  },
+  "base_window": {
+    "name": "validation days 120-150",
+    "start_day": 120,
+    "end_day": 150
+  },
+  "summary": {
+    "scale": 1.5,
+    "mean_shift": 0.25,
+    "blank": null,
+    "new_category": 0.1
+  },
+  "rows": [
+    {
+      "family": "scale",
+      "column": "TransactionAmt",
+      "magnitude": 1.05,
+      "label": "TransactionAmt x1.05",
+      "target_score": 0.031492,
+      "target_missing_shift": 0.0,
+      "target_detected": false,
+      "fires_on": "-",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "scale",
+      "column": "TransactionAmt",
+      "magnitude": 1.1,
+      "label": "TransactionAmt x1.1",
+      "target_score": 0.057558,
+      "target_missing_shift": 0.0,
+      "target_detected": false,
+      "fires_on": "-",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "scale",
+      "column": "TransactionAmt",
+      "magnitude": 1.2,
+      "label": "TransactionAmt x1.2",
+      "target_score": 0.115516,
+      "target_missing_shift": 0.0,
+      "target_detected": false,
+      "fires_on": "-",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "scale",
+      "column": "TransactionAmt",
+      "magnitude": 1.5,
+      "label": "TransactionAmt x1.5",
+      "target_score": 0.290685,
+      "target_missing_shift": 0.0,
+      "target_detected": true,
+      "fires_on": "score",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "scale",
+      "column": "TransactionAmt",
+      "magnitude": 2.0,
+      "label": "TransactionAmt x2.0",
+      "target_score": 0.582658,
+      "target_missing_shift": 0.0,
+      "target_detected": true,
+      "fires_on": "score",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "mean_shift",
+      "column": "C13",
+      "magnitude": 0.1,
+      "label": "C13 + 0.1 std",
+      "target_score": 0.144246,
+      "target_missing_shift": 0.0,
+      "target_detected": false,
+      "fires_on": "-",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "mean_shift",
+      "column": "C13",
+      "magnitude": 0.25,
+      "label": "C13 + 0.25 std",
+      "target_score": 0.293148,
+      "target_missing_shift": 0.0,
+      "target_detected": true,
+      "fires_on": "score",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "mean_shift",
+      "column": "C13",
+      "magnitude": 0.5,
+      "label": "C13 + 0.5 std",
+      "target_score": 0.541497,
+      "target_missing_shift": 0.0,
+      "target_detected": true,
+      "fires_on": "score",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "mean_shift",
+      "column": "C13",
+      "magnitude": 1.0,
+      "label": "C13 + 1.0 std",
+      "target_score": 1.038635,
+      "target_missing_shift": 0.0,
+      "target_detected": true,
+      "fires_on": "score",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "blank",
+      "column": "V258",
+      "magnitude": 0.05,
+      "label": "V258: 5% of values go missing",
+      "target_score": 0.072339,
+      "target_missing_shift": 0.10005,
+      "target_detected": false,
+      "fires_on": "-",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "blank",
+      "column": "V258",
+      "magnitude": 0.1,
+      "label": "V258: 10% of values go missing",
+      "target_score": 0.074807,
+      "target_missing_shift": 0.10769,
+      "target_detected": false,
+      "fires_on": "-",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "blank",
+      "column": "V258",
+      "magnitude": 0.2,
+      "label": "V258: 20% of values go missing",
+      "target_score": 0.061897,
+      "target_missing_shift": 0.12301,
+      "target_detected": false,
+      "fires_on": "-",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "blank",
+      "column": "V258",
+      "magnitude": 0.3,
+      "label": "V258: 30% of values go missing",
+      "target_score": 0.065522,
+      "target_missing_shift": 0.13831,
+      "target_detected": false,
+      "fires_on": "-",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "blank",
+      "column": "V258",
+      "magnitude": 0.5,
+      "label": "V258: 50% of values go missing",
+      "target_score": 0.053467,
+      "target_missing_shift": 0.16893,
+      "target_detected": false,
+      "fires_on": "-",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "new_category",
+      "column": "P_emaildomain",
+      "magnitude": 0.05,
+      "label": "P_emaildomain: 5% rows get a new value",
+      "target_score": 0.14864,
+      "target_missing_shift": 0.00282,
+      "target_detected": false,
+      "fires_on": "-",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "new_category",
+      "column": "P_emaildomain",
+      "magnitude": 0.1,
+      "label": "P_emaildomain: 10% rows get a new value",
+      "target_score": 0.208578,
+      "target_missing_shift": 0.01108,
+      "target_detected": true,
+      "fires_on": "score",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "new_category",
+      "column": "P_emaildomain",
+      "magnitude": 0.2,
+      "label": "P_emaildomain: 20% rows get a new value",
+      "target_score": 0.296747,
+      "target_missing_shift": 0.02758,
+      "target_detected": true,
+      "fires_on": "score",
+      "worst_other_score": 0.079758
+    },
+    {
+      "family": "new_category",
+      "column": "P_emaildomain",
+      "magnitude": 0.4,
+      "label": "P_emaildomain: 40% rows get a new value",
+      "target_score": 0.431421,
+      "target_missing_shift": 0.06018,
+      "target_detected": true,
+      "fires_on": "score",
+      "worst_other_score": 0.079758
+    }
+  ]
+}

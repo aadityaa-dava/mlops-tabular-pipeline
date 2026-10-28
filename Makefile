@@ -1,4 +1,4 @@
-.PHONY: help setup test lint format repro mlflow-ui serve export monitor
+.PHONY: help setup test lint format repro mlflow-ui serve export monitor simulate
 
 help:
 	@echo "make setup      install dependencies and the pinned Python (uv sync)"
@@ -34,3 +34,6 @@ export:
 
 monitor:
 	cd monitoring && uv run python run_monitor.py
+
+simulate:
+	cd monitoring && uv run python simulate.py

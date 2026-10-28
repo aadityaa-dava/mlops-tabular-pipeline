@@ -55,3 +55,43 @@ Open observations:
   thresholds would flag them. Whether that is signal or noise is untested.
 - Next: inject controlled shifts into a window to measure how small a shift the 0.2 rule
   detects.
+
+## Sensitivity simulation (monitoring/simulate.py)
+Base window: validation days 120-150 (50,000 rows), which fires nothing. The reference and
+thresholds (0.2 and 0.2) are the monitor's. One column is altered at a time.
+
+| alteration | target drift score | caught |
+|---|---|---|
+| TransactionAmt x1.05 / 1.1 / 1.2 / 1.5 / 2.0 | 0.031 / 0.058 / 0.116 / 0.291 / 0.583 | no / no / no / yes / yes |
+| C13 + 0.1 / 0.25 / 0.5 / 1.0 std | 0.144 / 0.293 / 0.541 / 1.039 | no / yes / yes / yes |
+| P_emaildomain: 5 / 10 / 20 / 40% of rows get an unseen value | 0.149 / 0.209 / 0.297 / 0.431 | no / yes / yes / yes |
+| V258: 5 / 10 / 20 / 30 / 50% of present values go missing | score 0.072 / 0.075 / 0.062 / 0.066 / 0.053 | no for all |
+
+For the V258 rows the missing-share shift was 0.100 / 0.108 / 0.123 / 0.138 / 0.169
+(baseline 0.092), below the 0.2 rule in every case.
+
+## What the simulation shows
+- The drift score behaves like the shift in reference standard deviations plus the column's
+  own baseline score (C13: 0.045 + 0.1 / 0.25 / 0.5 / 1.0 gives 0.145 / 0.295 / 0.545 /
+  1.045, measured 0.144 / 0.293 / 0.541 / 1.039).
+- A 20% inflation of transaction amounts (0.116) is missed. No single global threshold
+  separates it from normal variation, because C1 reached 0.111 on days 0-30 inside the
+  reference while TransactionAmt never exceeded 0.039 in any training block. Columns have
+  different natural noise, so per-column thresholds look necessary.
+- The missingness rule is nearly blind on sparse columns. Blanking half of V258's present
+  values moves its missing share by about 0.077, which implies V258 is present in about 15%
+  of rows (inferred, not counted). Even losing every value would move the share by only about
+  0.15. The unit test for this rule uses a column that is 40% missing, which is much easier
+  than the real data, so it overstates the rule's power.
+- The drift score for V258 does not rise when its values go missing (0.072 down to 0.053), so
+  the score appears to ignore missing values (inferred from these numbers, not checked in
+  Evidently's code). A field that stops arriving is only visible to the missingness rule.
+- The "worst other" column of the simulation output is D2's baseline (0.080) in every row: a
+  shift in one column does not disturb the others, and the column carries nothing else.
+
+## Next
+- Calibrate per-column thresholds from the four training blocks only, and judge them on the
+  validation and test windows. The window split then keeps calibration data separate from
+  judging data.
+- Replace the absolute missingness rule with one that scales with how often the column is
+  present, then re-run this simulation.
